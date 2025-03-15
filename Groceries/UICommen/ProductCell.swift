@@ -92,7 +92,7 @@ struct ProductCell_Previews: PreviewProvider {
                                               "unit_name": "pcs",
                                               "unit_value": "7",
                                               "nutrition_weight": "200g",
-                                              "price": 2.99,
+                                              "price": 2.9,
                                               "image": "https://img.freepik.com/free-vector/realistic-vector-icon-illustration-dairy-farm-fresh-milk-splash-with-milk-jug-bottle-isola_134830-2399.jpg?semt=ais_hybrid",
                                               "cat_name": "Frash Fruits & Vegetable",
                                               "type_name": "Pulses",
