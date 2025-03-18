@@ -55,7 +55,10 @@ struct HomeView: View {
                             pObj in
                             
                             ProductCell(pObj: pObj, didAddCart: {
-                                
+                                CartViewModel.serviceCallAddToCart(prodId: pObj.prodId, qty: 1) { isDone, msg in
+                                    self.homeVM.errorMessage = msg
+                                    self.homeVM.showError = true
+                                }
                             })
                         }
                     }
@@ -71,7 +74,11 @@ struct HomeView: View {
                     LazyHStack (spacing: 15) {
                         ForEach(homeVM.bestArr, id: \.id) { pObj in
                             ProductCell(pObj: pObj, didAddCart: {
-                                
+                                CartViewModel.serviceCallAddToCart(prodId: pObj.prodId, qty: 1) { isDone, msg in
+                                    self.homeVM.errorMessage = msg
+                                    self.homeVM.showError = true
+                                }
+
                             })
                         }
                     }
@@ -106,7 +113,11 @@ struct HomeView: View {
                     LazyHStack (spacing: 15) {
                         ForEach(homeVM.listArr, id: \.id) { pObj in
                             ProductCell(pObj: pObj, didAddCart: {
-                                
+                                CartViewModel.serviceCallAddToCart(prodId: pObj.prodId, qty: 1) { isDone, msg in
+                                    self.homeVM.errorMessage = msg
+                                    self.homeVM.showError = true
+                                }
+
                             }) 
                         }
                     }
@@ -116,6 +127,9 @@ struct HomeView: View {
                 .padding(.bottom, 35)
             }
         }
+        .alert(isPresented: $homeVM.showError, content: {
+            Alert(title: Text(Globs.AppName), message: Text(homeVM.errorMessage), dismissButton: .default(Text("OK")) )
+        })
         .navigationBarBackButtonHidden(true)
         .navigationBarHidden(true)
         .ignoresSafeArea()
@@ -123,5 +137,8 @@ struct HomeView: View {
 }
 
 #Preview {
+//    NavigationView {
+//        
+//    }
     HomeView()
 }

@@ -46,7 +46,7 @@ struct ExploreCategoryCell_Previews: PreviewProvider {
     static var previews: some View {
         ExploreCategoryCell(cObj: ExploreCategoryModel(dict: [ "cat_id": 1,
                                                                "cat_name": "Pulses",
-                                                               "image": "http://192.168.1.3:3001/img/type/202307261610181018aVOpgmY1W1.png",
+                                                               "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRTUshuJ5pq_Qn3RhB2FKXWNap5MYGl-JZZng&s",
                                                                "color": "F8A44C"]) )
         .padding(20)
     }
