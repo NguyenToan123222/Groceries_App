@@ -32,7 +32,9 @@ struct AccountView: View {
                 NavigationLink(destination: ChangePasswordView()) {
                     AccountRow(icon: "person", title: "Change Password")
                 }
-                AccountRow(icon: "map", title: "Delivery Address")
+                NavigationLink(destination: DeliveryAddressView()) {
+                    AccountRow(icon: "map", title: "Delivery Address")
+                }
                 AccountRow(icon: "creditcard", title: "Payment Methods")
                 AccountRow(icon: "ticket", title: "Promo Code")
                 AccountRow(icon: "bell", title: "Notifications")
@@ -75,13 +77,17 @@ struct AccountRow: View {
             Text(title)
                 .font(.system(size: 16))
             Spacer()
-//            Image(systemName: "chevron.right")
+//            Image("next_1")
 //                .foregroundColor(.gray)
+//                .frame(width: 15, height: 10)
+//                
         }
         .padding(.vertical, 8)
     }
 }
 
 #Preview {
-    AccountView()
+    NavigationView {
+        AccountView()
+    }
 }

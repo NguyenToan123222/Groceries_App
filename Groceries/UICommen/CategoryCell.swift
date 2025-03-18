@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SDWebImageSwiftUI
 
 struct CategoryCell: View {
     @State var tObj: TypeModel = TypeModel(dict: [:])
@@ -14,11 +15,12 @@ struct CategoryCell: View {
     
     var body: some View {
         HStack {
-            Image (tObj.image)
+            WebImage(url: URL(string: tObj.image ))
                 .resizable()
+                .indicator(.activity) // Activity Indicator
+                .transition(.fade(duration: 0.5))
                 .scaledToFit()
                 .frame(width: 70, height: 70)
-            
             
             Text ("Pulses")
                 .font(.customfont(.bold, fontSize: 16))
@@ -37,6 +39,6 @@ struct CategoryCell: View {
 #Preview {
     CategoryCell(tObj: TypeModel(dict: ["type_id": 1,
                                         "type_name": "Fruits",
-                                        "image": "ginger",
+                                        "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRTUshuJ5pq_Qn3RhB2FKXWNap5MYGl-JZZng&s",
                                         "color": "FF5733"]))
 }
