@@ -9,107 +9,93 @@ import SwiftUI
 
 struct MyCartView: View {
     @StateObject var cartVM = CartViewModel.shared
+    @State private var animateBackground = false
+    @State private var animateHeader = false
+    @State private var animateItems = false
+    @State private var animateCheckoutButton = false
+
     var body: some View {
-        ZStack{
-            
-            if(cartVM.listArr.count == 0) {
-                Text("You Card is Empty")
+        ZStack {
+            // Gradient background động
+            LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.1), Color.green.opacity(0.1)]),
+                           startPoint: .topLeading,
+                           endPoint: .bottomTrailing)
+                .edgesIgnoringSafeArea(.all)
+                .hueRotation(.degrees(animateBackground ? 360 : 0))
+                .animation(.linear(duration: 5).repeatForever(autoreverses: true), value: animateBackground)
+
+            // Thông báo giỏ hàng trống
+            if cartVM.listArr.isEmpty {
+                Text("Your Cart is Empty")
                     .font(.customfont(.bold, fontSize: 20))
+                    .offset(y: animateItems ? 0 : 50) // Trượt từ dưới lên
+                    .opacity(animateItems ? 1 : 0) // Hiệu ứng mờ dần
+                    .animation(.easeInOut(duration: 0.5), value: animateItems)
             }
-            
-            ScrollView{
+
+            // Danh sách sản phẩm
+            ScrollView {
                 LazyVStack {
-                    ForEach( cartVM.listArr , id: \.id, content: {
-                        cObj in
-                        
-                        CartItemRow(cObj: cObj)
-                        
-                    })
+                    ForEach(cartVM.listArr, id: \.productId) { item in
+                        // Truyền productId thay vì cObj
+                        CartItemRow(cartVM: cartVM, productId: item.productId ?? 0)
+                            .offset(x: animateItems ? 0 : -50)
+                            .opacity(animateItems ? 1 : 0)
+                            .animation(.easeInOut(duration: 0.5).delay(Double(cartVM.listArr.firstIndex(of: item) ?? 0) * 0.1), value: animateItems)
+                    }
                     .padding(.vertical, 8)
                 }
+                .padding(.top, .topInsets + 30)
                 .padding(20)
-                .padding(.top, .topInsets + 46)
-                .padding(.bottom, .bottomInsets + 60)
-                
             }
-            
-            
+
+            // Tiêu đề và nút Check Out
             VStack {
-                
-                HStack{
-                    
+                HStack {
                     Spacer()
-                    
                     Text("My Cart")
                         .font(.customfont(.bold, fontSize: 20))
                         .frame(height: 46)
+                        .offset(y: animateHeader ? 0 : -50) // Trượt từ trên xuống
+                        .opacity(animateHeader ? 1 : 0) // Hiệu ứng mờ dần
+                        .animation(.easeInOut(duration: 0.5), value: animateHeader)
                     Spacer()
-                    
                 }
-                .padding(.top, .topInsets)
+                .padding(20)
+                .padding(.top, 23)
                 .background(Color.white)
-                .shadow(color: Color.black.opacity(0.2),  radius: 2 )
-                
+
                 Spacer()
-                
-                if(cartVM.listArr.count > 0) {
+
+                if !cartVM.listArr.isEmpty {
                     Button {
-                        cartVM.showCheckout = true
+                        // Xử lý checkout nếu cần
                     } label: {
-                        ZStack {
-                            Text("Check Out")
-                                .font(.customfont(.semibold, fontSize: 18))
-                                .foregroundColor(.white)
-                                .multilineTextAlignment(.center)
-                            
-                            HStack {
-                                Spacer()
-                                Text("$\(cartVM.total)") // total money
-                                    .font(.customfont(.semibold, fontSize: 12))
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(Color.darkGray.opacity(0.2))
-                                    .cornerRadius(5)
-                            }
-                            .padding(.trailing)
-                        }
-                        
+                        Text("Check Out $\(cartVM.total)")
+                            .font(.customfont(.semibold, fontSize: 18))
+                            .foregroundColor(.white)
                     }
-                    .frame( minWidth: 0, maxWidth: .infinity, minHeight: 60, maxHeight: 60 )
-                    .background( Color.primaryApp)
+                    .frame(maxWidth: .infinity, minHeight: 60)
+                    .background(Color.primaryApp)
                     .cornerRadius(20)
                     .padding(.horizontal, 20)
-                    .padding(.bottom, .bottomInsets + 80)
-                    
-                    
+                    .padding(.bottom, .bottomInsets + 63)
+                    .scaleEffect(animateCheckoutButton ? 1.0 : 0.8) // Phóng to khi xuất hiện
+                    .opacity(animateCheckoutButton ? 1.0 : 0.0) // Hiệu ứng mờ dần
+                    .animation(.spring(response: 0.5, dampingFraction: 0.6), value: animateCheckoutButton)
                 }
-                
             }
-//            if(cartVM.showCheckout) {
-//                Color.black
-//                    .opacity(0.3)
-//                    .ignoresSafeArea()
-//                    .onTapGesture {
-//                        withAnimation {
-//                            cartVM.showCheckout = false
-//                        }
-//                    }
-//                
-//                CheckoutView(isShow: $cartVM.showCheckout )
-//                    .transition(.opacity.combined(with: .move(edge: .bottom)))
-//            }
         }
-        .onAppear{
-            cartVM.serviceCallList()
+        .onAppear {
+            cartVM.serviceCallList() // Làm mới danh sách giỏ hàng khi màn hình xuất hiện
+            animateBackground = true
+            animateHeader = true
+            animateItems = true
+            animateCheckoutButton = true
         }
-//        .background( NavigationLink(destination: OrderAccpetView(), isActive: $cartVM.showOrderAccept  , label: {
-//            EmptyView()
-//        }) )
-//        .alert(isPresented: $cartVM.showError, content: {
-//            Alert(title: Text(Globs.AppName), message: Text(cartVM.errorMessage), dismissButton: .default(Text("OK")) )
-//        })
-        .animation(.easeInOut, value: cartVM.showCheckout)
+        .alert(isPresented: $cartVM.showError) {
+            Alert(title: Text(Globs.AppName), message: Text(cartVM.errorMessage), dismissButton: .default(Text("OK")))
+        }
         .ignoresSafeArea()
     }
 }
@@ -119,6 +105,5 @@ struct MyCartView_Previews: PreviewProvider {
         NavigationView {
             MyCartView()
         }
-        
     }
 }

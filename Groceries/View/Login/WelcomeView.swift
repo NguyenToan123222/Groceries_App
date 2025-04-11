@@ -49,9 +49,9 @@ struct WelcomeView: View {
                     .frame(height: 60)
                 
                 
-            }
+            }//VStack
             .padding(.horizontal, 20)
-        }
+        }// ZStack
         .navigationTitle("")
         .navigationBarBackButtonHidden(true)
         .navigationBarHidden(true)

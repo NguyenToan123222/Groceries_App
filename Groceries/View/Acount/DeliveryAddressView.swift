@@ -55,13 +55,14 @@ struct DeliveryAddressView: View {
                                     .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                                 
                             }
+                            // Vstack
                             
-                            VStack{
+                            VStack{ // HStack
                                 
                                 Spacer()
                                 
                                 NavigationLink {
-//                                    AddDeliveryAddressView(isEdit: true, editObj: aObj  )
+                                    AddDeliveryAddressView(isEdit: true, editObj: aObj  )
                                 } label: {
                                     Image(systemName: "pencil")
                                         .resizable()
@@ -85,27 +86,29 @@ struct DeliveryAddressView: View {
                                 Spacer()
 
                             }
-                        }
+                        } //Hstack
                         .padding(15)
                         .background(Color.white)
                         .cornerRadius(5)
                         .shadow(color: Color.black.opacity(0.15), radius: 2)
-                        .onTapGesture {
-                            if(isPicker) {
-                                mode.wrappedValue.dismiss()
-                                didSelect?(aObj)
+                        .onTapGesture { // Bắt sự kiện chạm vào địa chỉ.
+                            if(isPicker) { // Chỉ thực hiện khi ở chế độ chọn.
+                                mode.wrappedValue.dismiss() // Khi người dùng chạm vào một địa chỉ, view DeliveryAddressView sẽ bị đóng
+                                didSelect?(aObj) // gửi địa chỉ được chọn (aObj) về view cha.
+                                // Chỉ gọi closure didSelect nếu nó *không phải* là nil
                             }
                         }
 
 
                     })
                 }
+                //LazyVStack
                 .padding(20)
                 .padding(.top, .topInsets + 46)
                 .padding(.bottom, .bottomInsets + 60)
 
             }
-            
+            // ScrollView
             
             VStack { // 👈 Khai báo TRƯỚC => Nằm TRÊN
                     
@@ -131,7 +134,7 @@ struct DeliveryAddressView: View {
                     
                     
                     NavigationLink {
-//                        AddDeliveryAddressView()
+                        AddDeliveryAddressView()
                     } label: {
                         Image("add_temp")
                             .resizable()

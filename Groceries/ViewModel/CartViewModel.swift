@@ -7,168 +7,206 @@
 
 import SwiftUI
 
-class CartViewModel: ObservableObject
-{
+class CartViewModel: ObservableObject {
     static var shared: CartViewModel = CartViewModel()
-    
-    
+
     @Published var showError = false
-    @Published var showOrderAccept = false
     @Published var errorMessage = ""
-    
     @Published var listArr: [CartItemModel] = []
     @Published var total: String = "0.0"
-    
-    @Published var showCheckout: Bool = false
-    
-    @Published var showPickerAddress: Bool = false
-    @Published var showPickerPayment: Bool = false
-    @Published var showPickerPromoCode: Bool = false
-    
-    @Published var deliveryType: Int = 1
-    @Published var paymentType: Int = 1
-//    @Published var deliverObj: AddressModel?
-//    @Published var paymentObj: PaymentModel?
-//    @Published var promoObj: PromoCodeModel?
-    
-    @Published var deliverPriceAmount: String = ""
-    @Published var discountAmount: String = ""
-    @Published var userPayAmount: String = ""
-    
-    
+
+    // Lấy userId từ hệ thống
+    private var userId: Int {
+        return Utils.UDValue(key: "userId") as? Int ?? 1
+    }
+
     init() {
         serviceCallList()
     }
-    
-    
-    
-    //MARK: ServiceCall
-    
-    func serviceCallList(){
-        ServiceCall.post(parameter: [:], path: Globs.SV_CART_LIST) { responseObj in
+
+    // Lấy danh sách giỏ hàng
+    func serviceCallList() {
+        let path = "\(Globs.SV_CART_LIST)?userId=\(userId)"
+        ServiceCall.get(path: path) { responseObj in
             if let response = responseObj as? NSDictionary {
-                if response.value(forKey: KKey.status) as? String ?? "" == "1" {
-                    
-                    self.total = response.value(forKey: "total") as? String ?? "0.0"
-                    self.discountAmount = response.value(forKey: "discount_amount") as? String ?? "0.0"
-                    self.deliverPriceAmount = response.value(forKey: "deliver_price_amount") as? String ?? "0.0"
-                    self.userPayAmount = response.value(forKey: "user_pay_price") as? String ?? "0.0"
-                    
-                   
-                    self.listArr = (response.value(forKey: KKey.payLoad) as? NSArray ?? []).map({ obj in
-                        return CartItemModel(dict: obj as? NSDictionary ?? [:])
-                    })
-                
-                }else{
-                    self.total = response.value(forKey: "total") as? String ?? "0.0"
-                    self.discountAmount = response.value(forKey: "discount_amount") as? String ?? "0.0"
-                    self.deliverPriceAmount = response.value(forKey: "deliver_price_amount") as? String ?? "0.0"
-                    self.userPayAmount = response.value(forKey: "user_pay_price") as? String ?? "0.0"
-                    
-                    self.errorMessage = response.value(forKey: KKey.message) as? String ?? "Fail"
+                print("Cart API Response: \(response)") // Debug dữ liệu
+                if let items = response["items"] as? NSArray {
+                    // Cập nhật listArr
+                    let newItems = items.map { CartItemModel(dict: $0 as? NSDictionary ?? [:]) }
+                    DispatchQueue.main.async {
+                        self.listArr = newItems
+                        // Tính lại total dựa trên listArr
+                        let calculatedTotal = newItems.reduce(0.0) { $0 + $1.totalPrice }
+                        self.total = String(format: "%.2f", calculatedTotal)
+                        print("Calculated Total: \(self.total)") // Debug total
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        self.errorMessage = "Failed to load cart items"
+                        self.showError = true
+                        self.listArr = []
+                        self.total = "0.0"
+                    }
+                }
+            } else {
+                DispatchQueue.main.async {
+                    self.errorMessage = "Invalid response format"
                     self.showError = true
+                    self.listArr = []
+                    self.total = "0.0"
                 }
             }
         } failure: { error in
-            self.errorMessage = error?.localizedDescription ?? "Fail"
-            self.showError = true
+            DispatchQueue.main.async {
+                self.errorMessage = error?.localizedDescription ?? "Failed to load cart"
+                self.showError = true
+                self.listArr = []
+                self.total = "0.0"
+            }
+        }
+    }
+        
+    // Thêm sản phẩm vào giỏ hàng
+    func serviceCallAddToCart(prodId: Int, qty: Int, completion: @escaping (Bool, String) -> Void) {
+        let path = "\(Globs.SV_ADD_CART)?userId=\(userId)&productId=\(prodId)&quantity=\(qty)"
+        ServiceCall.post(parameter: [:], path: path) { responseObj in
+            if let response = responseObj as? NSDictionary {
+                if let message = response["message"] as? String {
+                    DispatchQueue.main.async {
+                        self.serviceCallList() // Làm mới danh sách
+                        completion(true, message)
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        self.errorMessage = "Failed to add to cart: Invalid response"
+                        self.showError = true
+                    }
+                    completion(false, "Failed to add to cart: Invalid response")
+                }
+            }
+        } failure: { error in
+            DispatchQueue.main.async {
+                self.errorMessage = error?.localizedDescription ?? "Failed to add to cart"
+                self.showError = true
+            }
+            completion(false, self.errorMessage)
         }
     }
     
-    func serviceCallUpdateQty(cObj: CartItemModel, newQty: Int ){
-        ServiceCall.post(parameter: ["cart_id": cObj.cartId, "prod_id": cObj.prodId, "new_qty": newQty ], path: Globs.SV_UPDATE_CART) { responseObj in
-            if let response = responseObj as? NSDictionary {
-                if response.value(forKey: KKey.status) as? String ?? "" == "1" {
-                    
-                    
-                    self.serviceCallList()
-                
-                }else{
-                    self.errorMessage = response.value(forKey: KKey.message) as? String ?? "Fail"
-                    self.showError = true
+    // Thêm nhiều sản phẩm vào giỏ hàng
+    func addMultipleToCart(products: [ProductModel], completion: @escaping (Bool, String) -> Void) {
+        guard !products.isEmpty else {
+            completion(false, "No products to add to cart.")
+            return
+        }
+        
+        var successCount = 0
+        var errorMessages: [String] = []
+        let totalCount = products.count
+        
+        // Sử dụng DispatchGroup để theo dõi các tác vụ bất đồng bộ
+        let dispatchGroup = DispatchGroup()
+        
+        for product in products {
+            dispatchGroup.enter()
+            serviceCallAddToCart(prodId: product.id, qty: 1) { success, message in
+                if success {
+                    successCount += 1
+                } else {
+                    errorMessages.append("Failed to add \(product.name): \(message)")
                 }
+                dispatchGroup.leave()
             }
-        } failure: { error in
-            self.errorMessage = error?.localizedDescription ?? "Fail"
-            self.showError = true
+        }
+        
+        // Khi tất cả các tác vụ hoàn tất
+        dispatchGroup.notify(queue: .main) {
+            if successCount == totalCount {
+                completion(true, "All items added to cart successfully.")
+            } else if successCount > 0 {
+                completion(true, "Added \(successCount)/\(totalCount) items. Errors: \(errorMessages.joined(separator: "; "))")
+            } else {
+                completion(false, "Failed to add items to cart: \(errorMessages.joined(separator: "; "))")
+            }
         }
     }
-    
-    func serviceCallRemove(cObj: CartItemModel){
-        ServiceCall.post(parameter: ["cart_id": cObj.cartId, "prod_id": cObj.prodId ], path: Globs.SV_REMOVE_CART) { responseObj in
-            if let response = responseObj as? NSDictionary {
-                if response.value(forKey: KKey.status) as? String ?? "" == "1" {
-                    
-                    self.serviceCallList()
-                
-                }else{
-                    self.errorMessage = response.value(forKey: KKey.message) as? String ?? "Fail"
-                    self.showError = true
-                }
-            }
-        } failure: { error in
-            self.errorMessage = error?.localizedDescription ?? "Fail"
+        
+    // Cập nhật số lượng sản phẩm trong giỏ hàng
+    func serviceCallUpdateQty(cObj: CartItemModel, newQty: Int, completion: @escaping (Bool, String) -> Void) {
+        guard let productId = cObj.productId else {
+            self.errorMessage = "Invalid product ID"
             self.showError = true
-        }
-    }
-    
-//    func serviceCallOrderPlace(){
-//            
-//        if(deliveryType == 1 && deliverObj == nil ) {
-//            self.errorMessage = "Please select delivery address"
-//            self.showError = true
-//            return
-//        }
-//        
-//        if(paymentType == 2 && paymentObj == nil ) {
-//            self.errorMessage = "Please select payment method"
-//            self.showError = true
-//            return
-//        }
-//        
-//        ServiceCall.post(parameter: ["address_id": deliveryType == 2 ? "" : "\( deliverObj?.id ?? 0)",
-//                                     "deliver_type": deliveryType,
-//                                     "payment_type": paymentType,
-//                                     "pay_id": paymentType == 1 ? "" : "\( paymentObj?.id ?? 0)",
-//                                     "promo_code_id": promoObj?.id ?? ""  ], path: Globs.SV_ORDER_PLACE, isToken: true ) { responseObj in
-//            if let response = responseObj as? NSDictionary {
-//                if response.value(forKey: KKey.status) as? String ?? "" == "1" {
-//                    
-//                    
-//                    self.deliverObj = nil
-//                    self.paymentObj = nil
-//                    self.promoObj = nil
-//                    self.showCheckout = false
-//                    self.errorMessage = response.value(forKey: KKey.message) as? String ?? "Success"
-//                    self.showError = true
-//                    self.serviceCallList()
-//                    
-//                    self.showOrderAccept = true
-//                
-//                }else{
-//                    self.errorMessage = response.value(forKey: KKey.message) as? String ?? "Fail"
-//                    self.showError = true
-//                }
-//            }
-//        } failure: { error in
-//            self.errorMessage = error?.localizedDescription ?? "Fail"
-//            self.showError = true
-//        }
-//    }
-    
-    class func serviceCallAddToCart(prodId: Int, qty: Int, didDone: ((_ isDone: Bool,_ message: String  )->())? ) {
-        ServiceCall.post(parameter: ["prod_id":  prodId, "qty": qty], path: Globs.SV_ADD_CART) { responseObj in
-            if let response = responseObj as? NSDictionary {
-                if response.value(forKey: KKey.status) as? String ?? "" == "1" {
-                    didDone?(true, response.value(forKey: KKey.message) as? String ?? "Done" )
-                }else{
-                    didDone?(false, response.value(forKey: KKey.message) as? String ?? "Fail" )
-                }
-            }
-        } failure: { error in
-            didDone?(false,  error?.localizedDescription ?? "Fail" )
+            completion(false, "Invalid product ID")
+            return
         }
 
+        let path = "\(Globs.SV_UPDATE_CART)?userId=\(userId)&productId=\(productId)&quantity=\(newQty)"
+        
+        ServiceCall.put(parameter: [:], path: path) { responseObj in
+            if let response = responseObj as? NSDictionary {
+                if let message = response["message"] as? String {
+                    DispatchQueue.main.async {
+                        // Tìm và cập nhật item trong listArr
+                        if let index = self.listArr.firstIndex(where: { $0.productId == productId }) {
+                            // Cập nhật quantity và totalPrice
+                            self.listArr[index].quantity = newQty
+                            self.listArr[index].totalPrice = Double(newQty) * self.listArr[index].price
+                            // Gán lại listArr để kích hoạt làm mới giao diện
+                            self.listArr = self.listArr
+                            // Cập nhật total
+                            let calculatedTotal = self.listArr.reduce(0.0) { $0 + $1.totalPrice }
+                            self.total = String(format: "%.2f", calculatedTotal)
+                            print("Updated Total after qty change: \(self.total)") // Debug total
+                        }
+                    
+                        completion(true, message)
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        self.errorMessage = "Failed to update quantity: Invalid response"
+                        self.showError = true
+                        completion(false, "Failed to update quantity: Invalid response")
+                    }
+                }
+            }
+        } failure: { error in
+            DispatchQueue.main.async {
+                self.errorMessage = error?.localizedDescription ?? "Failed to update quantity"
+                self.showError = true
+                completion(false, self.errorMessage)
+            }
+        }
     }
     
+    // Xóa sản phẩm khỏi giỏ hàng
+    func serviceCallRemove(cObj: CartItemModel, completion: @escaping (Bool, String) -> Void) {
+        guard let productId = cObj.productId else { // Sử dụng productId thay vì id
+            self.errorMessage = "Invalid product ID"
+            self.showError = true
+            completion(false, "Invalid product ID")
+            return
+        }
+
+        let path = "\(Globs.SV_REMOVE_CART)?userId=\(userId)&productId=\(productId)"
+        ServiceCall.delete(path: path) { responseObj in
+            if let response = responseObj as? NSDictionary {
+                if let message = response["message"] as? String {
+                    self.serviceCallList() // Làm mới danh sách giỏ hàng
+                    completion(true, message)
+                } else {
+                    self.errorMessage = "Failed to remove item: Invalid response"
+                    self.showError = true
+                    completion(false, "Failed to remove item: Invalid response")
+                }
+            } else {
+                self.errorMessage = "Failed to remove item: Invalid response format"
+                self.showError = true
+                completion(false, "Failed to remove item: Invalid response format")
+            }
+        } failure: { error in
+            self.errorMessage = error?.localizedDescription ?? "Failed to remove item"
+            self.showError = true
+            completion(false, self.errorMessage)
+        }
+    }
 }
