@@ -3,6 +3,10 @@
     {
       "filename" : "add_green.png",
       "idiom" : "universal"
+    },
+    {
+      "filename" : "welcome.jpg",
+      "idiom" : "universal"
     }
   ],
   "info" : {

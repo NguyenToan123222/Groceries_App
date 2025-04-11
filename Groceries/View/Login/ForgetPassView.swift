@@ -65,12 +65,13 @@ struct ForgetPassView: View {
             .alert(isPresented: $mainVM.showError) {
                 Alert(title: Text(Globs.AppName), message: Text(mainVM.errorMessage), dismissButton: .default(Text("OK")))
             }
+            
             .alert(isPresented: $mainVM.showSuccess) {
                 Alert(
                     title: Text(Globs.AppName),
                     message: Text(mainVM.successMessage),
                     dismissButton: .default(Text("OK")) {
-                        if mainVM.navigateToLogin {
+                        if mainVM.navigationResettoLog {
                             mode.wrappedValue.dismiss()
                         } else if step == 1 {
                             withAnimation { step = 2 }
@@ -78,11 +79,12 @@ struct ForgetPassView: View {
                     }
                 )
             }
+            
             .onAppear {
                 animateBackground = true
                 animateLogo = true
             }
-        }
+        }// ZStack
         .navigationBarHidden(true)
         .ignoresSafeArea()
         .ignoresSafeArea(.keyboard)
@@ -107,7 +109,7 @@ struct ForgetPassView: View {
                     .padding()
                     .background(Color.white.opacity(0.2))
                     .cornerRadius(10)
-                    .foregroundColor(.white)
+                    .foregroundColor(.black)
                     .keyboardType(.emailAddress)
             }
             .padding(.horizontal, 20)

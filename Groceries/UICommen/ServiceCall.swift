@@ -8,16 +8,10 @@ class ServiceCall {
         withSuccess: @escaping ((_ responseObj: AnyObject?) -> ()),
         failure: @escaping ((_ error: Error?) -> ())
     ) {
-        DispatchQueue.global(qos: .userInitiated).async { // chạy trên luồng nền
-            // Chuyển parameter thành dữ liệu JSON
+        DispatchQueue.global(qos: .userInitiated).async {
             let jsonData: Data
             do {
                 jsonData = try JSONSerialization.data(withJSONObject: parameter, options: [])
-                /*
-                 ✅ DÙNG "try" để throw ra lỗi. NẾU CHUYỂN JSON KHÔNG THÀNH CÔNG
-                 - Chuyển parameter (NSDictionary) thành JSON (Data) để gửi lên server.
-                 - Nếu lỗi, chạy failure(error) trên main thread và dừng hàm.
-                 */
             } catch {
                 DispatchQueue.main.async {
                     failure(error)
@@ -25,36 +19,20 @@ class ServiceCall {
                 return
             }
 
-            // Tạo request
-            var request = URLRequest(url: URL(string: path)!, timeoutInterval: 20) // "!" CHẮC CHẮN HỢP LỆ
+            var request = URLRequest(url: URL(string: path)!, timeoutInterval: 20)
             request.httpMethod = "POST"
-            
-           /*
-            ✅
-            var request = URLRequest (url: URL(string: path)!, timeoutInterval: 20)
-            request.addValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-            if (isToken) {
-                #if DEBUG
-                request.addValue(MainViewModel.shared.userObj.authToken, forHTTPHeaderField: "access_token")
-                #else
-                request.addValue(MainViewModel.shared.userObj.authToken, forHTTPHeaderField: "access_token")
-                #endif
-            }
-            request.httpMethod = "POST"
-            request.httpBody = parameterData as Data
-            */
-            
-            // Đặt Content-Type là application/json
             request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-            
-            // Gắn dữ liệu JSON vào body
+
+            if !MainViewModel.shared.token.isEmpty {
+                request.addValue("Bearer \(MainViewModel.shared.token)", forHTTPHeaderField: "Authorization")
+            }
+
             request.httpBody = jsonData
-            
-            // Debug thông tin request
+
             debugPrint("Request URL: \(path)")
             debugPrint("Request Body: \(String(data: jsonData, encoding: .utf8) ?? "Invalid data")")
+            debugPrint("Authorization Header: \(request.value(forHTTPHeaderField: "Authorization") ?? "No token")")
 
-            // Gửi request
             let task = URLSession.shared.dataTask(with: request) { data, response, error in
                 if let error = error {
                     DispatchQueue.main.async {
@@ -62,11 +40,57 @@ class ServiceCall {
                     }
                     return
                 }
-                /*
-                 KIỂM TRA:
-                 - data có dữ liệu thì gán vào data
-                 - nếu không thì áo lỗi, rồi return (thoát)
-                 */
+
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    DispatchQueue.main.async {
+                        failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response"]))
+                    }
+                    return
+                }
+
+                if httpResponse.statusCode == 401 {
+                    // Token hết hạn, làm mới token
+                    MainViewModel.shared.refreshAccessToken { success in
+                        if success {
+                            // Gọi lại API với token mới
+                            var newRequest = request
+                            newRequest.setValue("Bearer \(MainViewModel.shared.token)", forHTTPHeaderField: "Authorization")
+                            URLSession.shared.dataTask(with: newRequest) { data, response, error in
+                                if let error = error {
+                                    DispatchQueue.main.async {
+                                        failure(error)
+                                    }
+                                    return
+                                }
+
+                                guard let data = data else {
+                                    DispatchQueue.main.async {
+                                        failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"]))
+                                    }
+                                    return
+                                }
+
+                                do {
+                                    let jsonDictionary = try JSONSerialization.jsonObject(with: data, options: .mutableContainers) as? NSDictionary
+                                    debugPrint("Response: ", jsonDictionary ?? "No response")
+                                    DispatchQueue.main.async {
+                                        withSuccess(jsonDictionary)
+                                    }
+                                } catch {
+                                    DispatchQueue.main.async {
+                                        failure(error)
+                                    }
+                                }
+                            }.resume()
+                        } else {
+                            DispatchQueue.main.async {
+                                failure(NSError(domain: "", code: 401, userInfo: [NSLocalizedDescriptionKey: "Failed to refresh token"]))
+                            }
+                        }
+                    }
+                    return
+                }
+
                 guard let data = data else {
                     DispatchQueue.main.async {
                         failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"]))
@@ -76,7 +100,6 @@ class ServiceCall {
 
                 do {
                     let jsonDictionary = try JSONSerialization.jsonObject(with: data, options: .mutableContainers) as? NSDictionary
-                    // Chuyển data từ server thành NSDictionary
                     debugPrint("Response: ", jsonDictionary ?? "No response")
                     DispatchQueue.main.async {
                         withSuccess(jsonDictionary)
@@ -87,7 +110,238 @@ class ServiceCall {
                     }
                 }
             }
-            
+
+            task.resume()
+        }
+    }
+
+    class func get(path: String, withSuccess: @escaping ((Any?) -> ()), failure: @escaping ((Error?) -> ())) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            var request = URLRequest(url: URL(string: path)!, timeoutInterval: 20)
+            request.httpMethod = "GET"
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+            if !MainViewModel.shared.token.isEmpty {
+                request.addValue("Bearer \(MainViewModel.shared.token)", forHTTPHeaderField: "Authorization")
+            }
+
+            let task = URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    DispatchQueue.main.async { failure(error) }
+                    return
+                }
+
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    DispatchQueue.main.async {
+                        failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response"]))
+                    }
+                    return
+                }
+
+                if httpResponse.statusCode == 401 {
+                    MainViewModel.shared.refreshAccessToken { success in
+                        if success {
+                            var newRequest = request
+                            newRequest.setValue("Bearer \(MainViewModel.shared.token)", forHTTPHeaderField: "Authorization")
+                            URLSession.shared.dataTask(with: newRequest) { data, response, error in
+                                if let error = error {
+                                    DispatchQueue.main.async { failure(error) }
+                                    return
+                                }
+
+                                guard let data = data else {
+                                    DispatchQueue.main.async { failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])) }
+                                    return
+                                }
+
+                                do {
+                                    let jsonObject = try JSONSerialization.jsonObject(with: data, options: .mutableContainers)
+                                    if jsonObject is NSDictionary || jsonObject is NSArray {
+                                        DispatchQueue.main.async { withSuccess(jsonObject) }
+                                    } else {
+                                        DispatchQueue.main.async { failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON format"])) }
+                                    }
+                                } catch {
+                                    DispatchQueue.main.async { failure(error) }
+                                }
+                            }.resume()
+                        } else {
+                            DispatchQueue.main.async {
+                                failure(NSError(domain: "", code: 401, userInfo: [NSLocalizedDescriptionKey: "Failed to refresh token"]))
+                            }
+                        }
+                    }
+                    return
+                }
+
+                guard let data = data else {
+                    DispatchQueue.main.async { failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])) }
+                    return
+                }
+
+                do {
+                    let jsonObject = try JSONSerialization.jsonObject(with: data, options: .mutableContainers)
+                    if jsonObject is NSDictionary || jsonObject is NSArray {
+                        DispatchQueue.main.async { withSuccess(jsonObject) }
+                    } else {
+                        DispatchQueue.main.async { failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid JSON format"])) }
+                    }
+                } catch {
+                    DispatchQueue.main.async { failure(error) }
+                }
+            }
+            task.resume()
+        }
+    }
+
+    class func put(parameter: NSDictionary, path: String, withSuccess: @escaping ((AnyObject?) -> ()), failure: @escaping ((Error?) -> ())) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            let jsonData: Data
+            do {
+                jsonData = try JSONSerialization.data(withJSONObject: parameter, options: [])
+            } catch {
+                DispatchQueue.main.async { failure(error) }
+                return
+            }
+
+            var request = URLRequest(url: URL(string: path)!, timeoutInterval: 20)
+            request.httpMethod = "PUT"
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+            if !MainViewModel.shared.token.isEmpty {
+                request.addValue("Bearer \(MainViewModel.shared.token)", forHTTPHeaderField: "Authorization")
+            }
+
+            request.httpBody = jsonData
+
+            let task = URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    DispatchQueue.main.async { failure(error) }
+                    return
+                }
+
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    DispatchQueue.main.async {
+                        failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response"]))
+                    }
+                    return
+                }
+
+                if httpResponse.statusCode == 401 {
+                    MainViewModel.shared.refreshAccessToken { success in
+                        if success {
+                            var newRequest = request
+                            newRequest.setValue("Bearer \(MainViewModel.shared.token)", forHTTPHeaderField: "Authorization")
+                            URLSession.shared.dataTask(with: newRequest) { data, response, error in
+                                if let error = error {
+                                    DispatchQueue.main.async { failure(error) }
+                                    return
+                                }
+
+                                guard let data = data else {
+                                    DispatchQueue.main.async { failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])) }
+                                    return
+                                }
+
+                                do {
+                                    let jsonDictionary = try JSONSerialization.jsonObject(with: data, options: .mutableContainers) as? NSDictionary
+                                    DispatchQueue.main.async { withSuccess(jsonDictionary) }
+                                } catch {
+                                    DispatchQueue.main.async { failure(error) }
+                                }
+                            }.resume()
+                        } else {
+                            DispatchQueue.main.async {
+                                failure(NSError(domain: "", code: 401, userInfo: [NSLocalizedDescriptionKey: "Failed to refresh token"]))
+                            }
+                        }
+                    }
+                    return
+                }
+
+                guard let data = data else {
+                    DispatchQueue.main.async { failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])) }
+                    return
+                }
+
+                do {
+                    let jsonDictionary = try JSONSerialization.jsonObject(with: data, options: .mutableContainers) as? NSDictionary
+                    DispatchQueue.main.async { withSuccess(jsonDictionary) }
+                } catch {
+                    DispatchQueue.main.async { failure(error) }
+                }
+            }
+            task.resume()
+        }
+    }
+
+    class func delete(path: String, withSuccess: @escaping ((AnyObject?) -> ()), failure: @escaping ((Error?) -> ())) {
+        DispatchQueue.global(qos: .userInitiated).async {
+            var request = URLRequest(url: URL(string: path)!, timeoutInterval: 20)
+            request.httpMethod = "DELETE"
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+            if !MainViewModel.shared.token.isEmpty {
+                request.addValue("Bearer \(MainViewModel.shared.token)", forHTTPHeaderField: "Authorization")
+            }
+
+            let task = URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    DispatchQueue.main.async { failure(error) }
+                    return
+                }
+
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    DispatchQueue.main.async {
+                        failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid response"]))
+                    }
+                    return
+                }
+
+                if httpResponse.statusCode == 401 {
+                    MainViewModel.shared.refreshAccessToken { success in
+                        if success {
+                            var newRequest = request
+                            newRequest.setValue("Bearer \(MainViewModel.shared.token)", forHTTPHeaderField: "Authorization")
+                            URLSession.shared.dataTask(with: newRequest) { data, response, error in
+                                if let error = error {
+                                    DispatchQueue.main.async { failure(error) }
+                                    return
+                                }
+
+                                guard let data = data else {
+                                    DispatchQueue.main.async { failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])) }
+                                    return
+                                }
+
+                                do {
+                                    let jsonDictionary = try JSONSerialization.jsonObject(with: data, options: .mutableContainers) as? NSDictionary
+                                    DispatchQueue.main.async { withSuccess(jsonDictionary) }
+                                } catch {
+                                    DispatchQueue.main.async { failure(error) }
+                                }
+                            }.resume()
+                        } else {
+                            DispatchQueue.main.async {
+                                failure(NSError(domain: "", code: 401, userInfo: [NSLocalizedDescriptionKey: "Failed to refresh token"]))
+                            }
+                        }
+                    }
+                    return
+                }
+
+                guard let data = data else {
+                    DispatchQueue.main.async { failure(NSError(domain: "", code: -1, userInfo: [NSLocalizedDescriptionKey: "No data received"])) }
+                    return
+                }
+
+                do {
+                    let jsonDictionary = try JSONSerialization.jsonObject(with: data, options: .mutableContainers) as? NSDictionary
+                    DispatchQueue.main.async { withSuccess(jsonDictionary) }
+                } catch {
+                    DispatchQueue.main.async { failure(error) }
+                }
+            }
             task.resume()
         }
     }

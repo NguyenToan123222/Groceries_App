@@ -45,7 +45,7 @@ struct AddDeliveryAddressView: View {
                         
                         
                     }
-                    
+                    // HStack
                     
                     LineTextField(txt: $addressVM.txtName, title: "Name", placeholder: "Enter you name")
                     
@@ -64,11 +64,11 @@ struct AddDeliveryAddressView: View {
                     RoundButton(tittle: isEdit ? "Update Address" : "Add Address") {
                         if(isEdit) { // Update
                             addressVM.serviceCallUpdateAddress(aObj: editObj) {
-                                self.mode.wrappedValue.dismiss()
+                                self.mode.wrappedValue.dismiss() // Sau khi cập nhật thành công. đóng màn hình.
                             }
-                        }else{ // Add
+                        } else { // Add
                             addressVM.serviceCallAddAddress {
-                                self.mode.wrappedValue.dismiss()
+                                self.mode.wrappedValue.dismiss() // Sau khi cập nhật thành công. đóng màn hình.
                             }
                         }
                     }
@@ -113,7 +113,7 @@ struct AddDeliveryAddressView: View {
                 
             }
         }
-        .onAppear{
+        .onAppear{// thực hiện khi edit và đưa dữ liệu từ : DeliveryAddressView sang AddDeliveryAddressView
             if(isEdit) {
                 if let aObj = editObj {
                     addressVM.setData(aObj: aObj)
