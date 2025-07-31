@@ -1,13 +1,13 @@
-
 import SwiftUI
 
 struct SignUpView: View {
+    
     @Environment(\.presentationMode) var mode: Binding<PresentationMode>
     @EnvironmentObject var mainVM: MainViewModel
+    
     @State private var isNavigatingTo = false
     @State private var passwordError: String?
     
-    // Biến để điều khiển animation
     @State private var animateGradient = false
     @State private var animateLogo = false
     @State private var animateTitle = false
@@ -23,13 +23,11 @@ struct SignUpView: View {
     
     var body: some View {
         ZStack {
-            // Background
             Image("welcome")
                 .resizable()
                 .scaledToFill()
                 .edgesIgnoringSafeArea(.all)
             
-            // Gradient động
             LinearGradient(colors: [Color.purple, Color.blue, Color.pink, Color.orange],
                            startPoint: .topLeading,
                            endPoint: .bottomTrailing)
@@ -46,7 +44,6 @@ struct SignUpView: View {
                         .frame(width: 40)
                         .padding(.bottom, .screenWidth * 0.05)
                         .rotationEffect(.degrees(animateLogo ? 360 : 0))
-                        .offset(y: animateLogo ? 0 : -200) // Bay từ trên xuống
                         .animation(Animation.easeInOut(duration: 2).repeatForever(autoreverses: true), value: animateLogo)
                         .padding(.trailing, 75)
                     
@@ -55,7 +52,7 @@ struct SignUpView: View {
                         .foregroundColor(.primaryText)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.bottom, 4)
-                        .offset(x: animateTitle ? 0 : -300) // Bay từ bên trái
+                        .offset(x: animateTitle ? 0 : -300)
                         .rotationEffect(.degrees(animateTitle ? 0 : -90))
                         .scaleEffect(animateTitle ? 1 : 0.3)
                         .opacity(animateTitle ? 1 : 0)
@@ -63,11 +60,11 @@ struct SignUpView: View {
                         .padding(.trailing, 55)
                     
                     Text("Enter your credentials to continue")
-                        .font(.customfont(.semibold, fontSize: 16))
-                        .foregroundColor(.secondaryText)
+                        .font(.customfont(.semibold, fontSize: 19))
+                        .foregroundColor(.black)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.bottom, .screenWidth * 0.09)
-                        .offset(x: animateDescription ? 0 : 300) // Bay từ bên phải
+                        .offset(x: animateDescription ? 0 : 300)
                         .rotationEffect(.degrees(animateDescription ? 0 : 90))
                         .scaleEffect(animateDescription ? 1 : 0.3)
                         .opacity(animateDescription ? 1 : 0)
@@ -76,13 +73,14 @@ struct SignUpView: View {
                     
                     Group {
                         LineTextField(txt: $mainVM.txtFullName, title: "User name", placeholder: "Enter your username")
-                            .padding(.leading, 50)
-                            .padding(.trailing, 106)
                             .offset(x: animateUsernameField ? 0 : -200, y: animateUsernameField ? 0 : 300)
                             .rotationEffect(.degrees(animateUsernameField ? 0 : -45))
                             .scaleEffect(animateUsernameField ? 1 : 0.5)
                             .opacity(animateUsernameField ? 1 : 0)
                             .animation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0).delay(0.8), value: animateUsernameField)
+                            .padding(.leading, 50)
+                            .padding(.trailing, 106)
+                        
 
                         LineTextField(txt: $mainVM.txtEmail, title: "Email", placeholder: "Enter your email address", keyboardType: .emailAddress)
                             .padding(.leading, 50)
@@ -125,7 +123,7 @@ struct SignUpView: View {
                             .scaleEffect(animateAddressField ? 1 : 0.5)
                             .opacity(animateAddressField ? 1 : 0)
                             .animation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0).delay(1.6), value: animateAddressField)
-                    }
+                    } // Group
                     .padding(.bottom, .screenWidth * 0.04)
 
                     VStack {
@@ -158,10 +156,35 @@ struct SignUpView: View {
                     .animation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0).delay(1.8), value: animateTerms)
 
                     RoundButton(tittle: "Sign Up") {
-                        passwordError = mainVM.txtPassword.isEmpty ? "Please enter a valid password" : nil
-                        if passwordError == nil {
-                            mainVM.serviceCallSignUp()
+                        // Kiểm tra các trường trước khi gọi API
+                        if mainVM.txtFullName.isEmpty {
+                            mainVM.errorMessage = "Please enter your full name"
+                            mainVM.showError = true
+                            return
                         }
+                        if !mainVM.txtEmail.isValidEmail {
+                            mainVM.errorMessage = "Please enter a valid email address"
+                            mainVM.showError = true
+                            return
+                        }
+                        if mainVM.txtPassword.isEmpty {
+                            passwordError = "Please enter a valid password"
+                            return
+                        }
+                        if mainVM.txtPhone.isEmpty {
+                            mainVM.errorMessage = "Please enter your phone number"
+                            mainVM.showError = true
+                            return
+                        }
+                        if mainVM.txtAddress.isEmpty {
+                            mainVM.errorMessage = "Please enter your address"
+                            mainVM.showError = true
+                            return
+                        }
+
+                        // Nếu không có lỗi, tiến hành gọi API và điều hướng
+                        passwordError = nil
+                        mainVM.serviceCallSignUp()
                     }
                     .padding(.leading, 45)
                     .padding(.trailing, 106)
@@ -173,7 +196,7 @@ struct SignUpView: View {
 
                     NavigationLink {
                         LoginView()
-                            .environmentObject(mainVM) // Truyền MainViewModel cho LoginView
+                            .environmentObject(mainVM)
                     } label: {
                         HStack {
                             Text("Already have an account?")
@@ -191,7 +214,9 @@ struct SignUpView: View {
                 }
                 .padding(.top, .topInsets + 1)
                 .padding(.horizontal, 20)
+                .padding(.bottom, 300)
             }
+            .ignoresSafeArea(.keyboard)
             
             VStack {
                 HStack {
@@ -211,7 +236,8 @@ struct SignUpView: View {
             .padding(.horizontal, 20)
             
             NavigationLink(
-                destination: OTPView(),
+                destination: OTPView()
+                    .environmentObject(mainVM),
                 isActive: $isNavigatingTo,
                 label: { EmptyView() }
             )
@@ -236,22 +262,19 @@ struct SignUpView: View {
             animateTerms = true
             animateSignUpButton = true
             animateSignInLink = true
-            
-            // Đặt lại trạng thái điều hướng
-            isNavigatingTo = false
-            mainVM.navigateTo = false
         }
         .onChange(of: mainVM.navigateToOTP) { newValue in
+            print("navigateToOTP changed to: \(newValue)")
             if newValue {
+                print("Setting isNavigatingTo to true")
                 isNavigatingTo = true
             }
+            print("Current isNavigatingTo: \(isNavigatingTo)")
         }
     }
 }
 
 #Preview {
-    NavigationView {
-        SignUpView()
-            .environmentObject(MainViewModel.shared)
-    }
+    SignUpView()
+        .environmentObject(MainViewModel.shared)
 }

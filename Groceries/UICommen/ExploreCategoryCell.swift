@@ -13,29 +13,37 @@ struct ExploreCategoryCell: View {
     
     var body: some View {
         VStack {
-            WebImage(url: URL(string: cObj.image))
-                .resizable()
-                .indicator(.activity) // Activity Indicator
-                .transition(.fade(duration: 0.5))
-                .scaledToFit()
-                .frame(width: 100, height: 70) // Giảm kích thước hình ảnh để giống giao diện trong hình
+            // Sử dụng hình ảnh từ Assets nếu có, nếu không thì dùng URL
+            if let assetImageName = cObj.assetImageName {
+                Image(assetImageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 130, height: 100)
+                    .clipped()
+            } else {
+                WebImage(url: URL(string: cObj.image))
+                    .resizable()
+                    .indicator(.activity)
+                    .transition(.fade(duration: 0.5))
+                    .scaledToFit()
+                    .frame(width: 100, height: 70)
+            }
             
             Spacer()
             
             Text(cObj.name)
-                .font(.customfont(.bold, fontSize: 14)) // Giảm kích thước chữ
+                .font(.customfont(.bold, fontSize: 14))
                 .foregroundColor(.primaryText)
                 .frame(minWidth: 0, maxWidth: .infinity, alignment: .center)
-                .lineLimit(2) // Cho phép xuống dòng nếu tên dài (như "Fresh Fruits & Vegetable")
+                .lineLimit(2)
             
             Spacer()
         }
-        .padding(10) // Giảm padding để ô nhỏ gọn hơn
-        .background(cObj.color.opacity(0.2)) // Giảm độ mờ của màu nền
-        .cornerRadius(10) // Giảm góc bo tròn
+        .padding(10)
+        .background(Color(hex: cObj.color).opacity(0.2)) // Sửa lỗi: Chỉ gọi Color(hex:) một lần
         .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .stroke(cObj.color.opacity(0.5), lineWidth: 1) // Làm viền mờ hơn
+                .stroke(Color(hex: cObj.color).opacity(0.5), lineWidth: 1) // Sửa lỗi: Chỉ gọi Color(hex:) một lần
         )
     }
 }

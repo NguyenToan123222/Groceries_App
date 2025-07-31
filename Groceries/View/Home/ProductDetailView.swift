@@ -1,4 +1,3 @@
-//
 //  ProductDetailView.swift
 //  Groceries_Shop
 //
@@ -9,29 +8,35 @@ import SwiftUI
 import SDWebImageSwiftUI
 
 struct ProductDetailView: View {
-    // MARK: - Properties
-    @Environment(\.presentationMode) var mode: Binding<PresentationMode>
-    @StateObject var detailVM: ProductDetailViewModel
-    @StateObject var favVM = FavouriteViewModel.shared // ViewModel for favorites
     
+    @Environment(\.presentationMode) var mode: Binding<PresentationMode>
+    
+    @StateObject var detailVM: ProductDetailViewModel
+    @StateObject var favVM = FavouriteViewModel.shared
+    @StateObject var reviewVM = ReviewViewModel.shared
+
     @State private var isImageLoaded = false
     @State private var isContentVisible = false
     @State private var isFavorite = false
-    @State private var showAlert = false // For showing add/remove favorite alerts
-    @State private var alertMessage = "" // Message for the alert
-    
-    // MARK: - Initialization
+    @State private var showAlert = false
+    @State private var alertMessage = ""
+    @State private var canReview = false
+    @State private var showWriteReview = false
+    @State private var newRating: Float = 0.0
+    @State private var newComment: String = ""
+
     init(productId: Int) {
         _detailVM = StateObject(wrappedValue: ProductDetailViewModel(productId: productId))
     }
-    
-    // MARK: - Body
+
     var body: some View {
-        ZStack {
+        ZStack(alignment: .bottom) {
             backgroundView
             mainContentView
             topBarView
+            addToCartButtonView
         }
+        
         .alert(isPresented: $showAlert) {
             Alert(
                 title: Text(Globs.AppName),
@@ -46,31 +51,68 @@ struct ProductDetailView: View {
                 dismissButton: .default(Text("OK"))
             )
         }
+        // Bo alert cho reviewVM.showError
+        .sheet(isPresented: $showWriteReview) {
+            WriteReviewView(
+                rating: $newRating,
+                comment: $newComment,  // new
+                onSubmit: {
+                    reviewVM.addReview(productId: detailVM.pObj.id, rating: newRating, comment: newComment.isEmpty ? nil : newComment) { success, message in
+                        if success {
+                            reviewVM.fetchReviews(productId: detailVM.pObj.id) {}
+                            canReview = false
+                        }
+                        alertMessage = message
+                        showAlert = true
+                        showWriteReview = false
+                    }
+                },
+                onCancel: {
+                    showWriteReview = false
+                }
+            )
+        } // shet
         .navigationTitle("")
         .navigationBarBackButtonHidden(true)
         .navigationBarHidden(true)
         .ignoresSafeArea()
         .onAppear {
             withAnimation(.easeInOut(duration: 0.5)) {
-                isContentVisible = true
+                isContentVisible = true // Kích hoạt hiệu ứng hiển thị nội dung (tên, giá, đánh giá, v.v.).
             }
-            // Làm mới danh sách yêu thích trước khi kiểm tra trạng thái
-                favVM.serviceCallDetail()
-            // Check initial favorite status
-            isFavorite = favVM.listArr.contains { $0.id == detailVM.pObj.id }
+            favVM.serviceCallDetail {// Tải danh sách yêu thích để kiểm tra xem sản phẩm hiện tại có được yêu thích không
+                isFavorite = favVM.listArr.contains { $0.id == detailVM.pObj.id }
+                // Cách hoạt động: Kiểm tra xem ID của sản phẩm hiện tại (detailVM.pObj.id) có trong danh sách yêu thích (favVM.listArr) không, gán kết quả vào @State var isFavorite.
+            }
+            reviewVM.canUserReview(productId: detailVM.pObj.id) { can in
+                self.canReview = can
+                // Kiểm tra xem người dùng có quyền viết đánh giá cho sản phẩm không.
+            }
         }
-        .onChange(of: favVM.listArr) { newList in
-            // Update favorite status when the list changes
+        .onChange(of: detailVM.pObj.id) { newId in
+            if newId != 0 {
+                // Reset trạng thái của reviewVM trước khi fetch dữ liệu mới
+                reviewVM.showError = false
+                reviewVM.errorMessage = ""
+                reviewVM.listArr = []
+                
+                reviewVM.fetchReviews(productId: newId) {} // tải đánh giá cho sp
+                reviewVM.canUserReview(productId: newId) { can in // review
+                    self.canReview = can
+                }
+            }
+        }
+        .onChange(of: favVM.listArr) { newList in // newList = [Orange, Banana, Carrot].
+            // Theo dõi favVM.listArr, chạy closure khi danh sách thay đổi, nhận newList là danh sách mới.
             isFavorite = newList.contains { $0.id == detailVM.pObj.id }
+            //$0.id == detailVM.pObj.id so sánh ID của từng sản phẩm trong newList với ID của sản phẩm hiện tại (detailVM.pObj.id).
         }
-    }
-    
-    // MARK: - Background View
+    } // body
+
     private var backgroundView: some View {
         Color.white.edgesIgnoringSafeArea(.all)
     }
-    
-    // MARK: - Main Content View
+
     private var mainContentView: some View {
         ScrollView {
             VStack(spacing: 0) {
@@ -79,21 +121,21 @@ struct ProductDetailView: View {
             }
         }
     }
-    
-    // MARK: - Product Image View
+
     private var productImageView: some View {
-        ZStack {
+        ZStack(alignment: .center) {
             Rectangle()
                 .foregroundColor(Color(hex: "F2F2F2"))
                 .frame(width: .screenWidth, height: .screenWidth * 0.8)
                 .cornerRadius(35, corner: [.bottomLeft, .bottomRight])
-            
+
             WebImage(url: URL(string: detailVM.pObj.imageUrl ?? "https://img.freepik.com/free-vector/illustration-gallery-icon_53876-27002.jpg"))
                 .indicator(.activity)
                 .transition(.fade(duration: 0.5))
-                .scaledToFit()
-                .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
+                .scaledToFill()
+                .frame(width: .screenWidth, height: .screenWidth * 0.8)
                 .clipShape(RoundedRectangle(cornerRadius: 20))
+                .clipped()
                 .shadow(radius: 5)
                 .scaleEffect(isImageLoaded ? 1.0 : 0.8)
                 .opacity(isImageLoaded ? 1.0 : 0.0)
@@ -103,10 +145,10 @@ struct ProductDetailView: View {
                     }
                 }
         }
+        
         .frame(width: .screenWidth, height: .screenWidth * 0.8)
     }
-    
-    // MARK: - Product Info View
+
     private var productInfoView: some View {
         VStack(spacing: 20) {
             Text(detailVM.pObj.name)
@@ -118,7 +160,7 @@ struct ProductDetailView: View {
                 .opacity(isContentVisible ? 1.0 : 0.0)
                 .offset(y: isContentVisible ? 0 : 20)
                 .animation(.easeInOut(duration: 0.5).delay(0.2), value: isContentVisible)
-            
+
             Text("\(detailVM.pObj.unitValue) \(detailVM.pObj.unitName), Price")
                 .font(.customfont(.semibold, fontSize: 16))
                 .foregroundColor(.secondaryText)
@@ -127,29 +169,46 @@ struct ProductDetailView: View {
                 .opacity(isContentVisible ? 1.0 : 0.0)
                 .offset(y: isContentVisible ? 0 : 20)
                 .animation(.easeInOut(duration: 0.5).delay(0.3), value: isContentVisible)
-            
+
             quantityAndPriceView
-            
+
             Divider()
                 .padding(.horizontal, 20)
-            
+
             descriptionView
-            
+
             Divider()
                 .padding(.horizontal, 20)
-            
+
             nutritionView
-            
+
             Divider()
                 .padding(.horizontal, 20)
-            
+
             reviewView
+
+            if canReview {
+                Button(action: {
+                    newRating = 0.0
+                    newComment = ""
+                    showWriteReview = true
+                }) {
+                    Text("Write Review")
+                        .font(.customfont(.bold, fontSize: 16))
+                        .foregroundColor(.white)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.green)
+                        .cornerRadius(10)
+                }
+                .padding(.horizontal, 20)
+            }
+
             
-            addToCartButtonView
-        }
+        } // Vstack
+        
     }
-    
-    // MARK: - Quantity and Price View
+
     private var quantityAndPriceView: some View {
         HStack {
             HStack(spacing: 15) {
@@ -166,7 +225,7 @@ struct ProductDetailView: View {
                         .background(Color.gray.opacity(0.1))
                         .clipShape(Circle())
                 }
-                
+
                 Text("\(detailVM.qty)")
                     .font(.customfont(.bold, fontSize: 24))
                     .foregroundColor(.primaryText)
@@ -177,7 +236,7 @@ struct ProductDetailView: View {
                     )
                     .scaleEffect(detailVM.qty > 1 ? 1.1 : 1.0)
                     .animation(.spring(response: 0.3, dampingFraction: 0.6), value: detailVM.qty)
-                
+
                 Button(action: {
                     withAnimation {
                         detailVM.addSubQty(isAdd: true)
@@ -191,24 +250,45 @@ struct ProductDetailView: View {
                         .background(Color.green.opacity(0.1))
                         .clipShape(Circle())
                 }
-            }
-            
+            } // H2
+
             Spacer()
-            
-            Text("$\((detailVM.pObj.offerPrice ?? detailVM.pObj.price) * Double(detailVM.qty), specifier: "%.2f")")
-                .font(.customfont(.bold, fontSize: 28))
-                .foregroundColor(.primaryText)
-                .scaleEffect(detailVM.qty > 1 ? 1.1 : 1.0)
-                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: detailVM.qty)
-        }
+
+            VStack(alignment: .trailing, spacing: 4) {
+                if let offerPrice = detailVM.pObj.offerPrice, offerPrice < detailVM.pObj.price {
+                    if let discount = detailVM.pObj.discountPercentage {
+                        Text("-\(Int(discount))% OFF")
+                            .font(.customfont(.bold, fontSize: 14))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color.red)
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.white, lineWidth: 1)
+                            )
+                    }
+                }
+                Text("$\(detailVM.pObj.price * Double(detailVM.qty), specifier: "%.2f")")
+                    .font(.customfont(.medium, fontSize: 20))
+                    .foregroundColor(.red)
+                    .strikethrough(true, color: .red)
+                
+                Text("$\((detailVM.pObj.offerPrice ?? detailVM.pObj.price) * Double(detailVM.qty), specifier: "%.2f")")// ưu tiên offerPrice, nếu không thì price
+                    .font(.customfont(.bold, fontSize: 28))
+                    .foregroundColor(.primaryText)
+                    .scaleEffect(detailVM.qty > 1 ? 1.1 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: detailVM.qty)
+            } // V
+        } // Hstack
         .padding(.horizontal, 20)
         .padding(.vertical, 8)
         .opacity(isContentVisible ? 1.0 : 0.0)
         .offset(y: isContentVisible ? 0 : 20)
         .animation(.easeInOut(duration: 0.5).delay(0.4), value: isContentVisible)
     }
-    
-    // MARK: - Description View
+
     private var descriptionView: some View {
         VStack {
             Text("Description")
@@ -216,7 +296,7 @@ struct ProductDetailView: View {
                 .foregroundColor(.primaryText)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 20)
-            
+
             Text(detailVM.pObj.description ?? "No description available")
                 .font(.customfont(.medium, fontSize: 13))
                 .foregroundColor(.secondaryText)
@@ -226,10 +306,9 @@ struct ProductDetailView: View {
                 .opacity(isContentVisible ? 1.0 : 0.0)
                 .offset(y: isContentVisible ? 0 : 20)
                 .animation(.easeInOut(duration: 0.5).delay(0.5), value: isContentVisible)
-        }
+        } // V
     }
-    
-    // MARK: - Nutrition View
+
     private var nutritionView: some View {
         VStack {
             Text("Nutritions")
@@ -237,7 +316,7 @@ struct ProductDetailView: View {
                 .foregroundColor(.primaryText)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 20)
-            
+
             LazyVStack(spacing: 10) {
                 ForEach(detailVM.pObj.nutritionValues) { nObj in
                     HStack {
@@ -245,7 +324,7 @@ struct ProductDetailView: View {
                             .font(.customfont(.semibold, fontSize: 15))
                             .foregroundColor(.secondaryText)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                        
+
                         Text("\(nObj.value, specifier: "%.2f")")
                             .font(.customfont(.semibold, fontSize: 15))
                             .foregroundColor(.primaryText)
@@ -259,50 +338,91 @@ struct ProductDetailView: View {
             .animation(.easeInOut(duration: 0.5).delay(0.6), value: isContentVisible)
         }
     }
-    
-    // MARK: - Review View
+
     private var reviewView: some View {
-        HStack {
-            Text("Review")
-                .font(.customfont(.semibold, fontSize: 16))
-                .foregroundColor(.primaryText)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            
-            HStack(spacing: 2) {
-                ForEach(1...5, id: \.self) { index in
-                    Image(systemName: "star.fill")
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Review")
+                    .font(.customfont(.semibold, fontSize: 16))
+                    .foregroundColor(.primaryText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                let filledStars = Int(detailVM.pObj.avgRating ?? 0)
+
+                HStack(spacing: 2) {
+                    ForEach(1...5, id: \.self) { index in
+                        Image(systemName: "star.fill")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 15, height: 15)
+                            .foregroundColor(index <= filledStars ? .orange : .gray)
+                            .scaleEffect(index <= filledStars ? 1.2 : 1.0)
+                    }
+                }
+
+                Button(action: {
+                    // Co the dan den man hinh chi tiet danh gia neu can
+                }) {
+                    Image("next_1")
                         .resizable()
                         .scaledToFit()
-                        .foregroundColor(index <= (detailVM.pObj.avgRating ?? 0) ? .orange : .gray)
                         .frame(width: 15, height: 15)
-                        .scaleEffect(index <= (detailVM.pObj.avgRating ?? 0) ? 1.2 : 1.0)
-                        .animation(.spring(response: 0.3, dampingFraction: 0.6).delay(Double(index) * 0.1), value: detailVM.pObj.avgRating)
+                        .padding(15)
+                        .foregroundColor(.primaryText)
                 }
-            }
-            
-            Button(action: {
-                // Navigate to review view (if implemented)
-            }) {
-                Image("next_1")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 15, height: 15)
-                    .padding(15)
-                    .foregroundColor(.primaryText)
-            }
+            } // Vstack
+
+            if reviewVM.showError {
+                Text("Failed to load reviews.")
+                    .font(.customfont(.medium, fontSize: 14))
+                    .foregroundColor(.secondaryText)
+                    .padding(.horizontal, 20)
+            } else if reviewVM.listArr.isEmpty {
+                Text("No reviews yet.")
+                    .font(.customfont(.medium, fontSize: 14))
+                    .foregroundColor(.secondaryText)
+                    .padding(.horizontal, 20)
+            } else {
+                ForEach(reviewVM.listArr) { review in
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack {
+                            ForEach(1...5, id: \.self) { index in
+                                Image(systemName: "star.fill")
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 12, height: 12)
+                                    .foregroundColor(index <= Int(review.rating) ? .orange : .gray)
+                            }
+                            Spacer()
+                            Text(review.createdAt.displayDate(format: "yyyy-MM-dd"))
+                                .font(.customfont(.regular, fontSize: 12))
+                                .foregroundColor(.secondaryText)
+                        }
+                        if let comment = review.comment, !comment.isEmpty { // review.comment không nil và không rỗng
+                            Text(comment)
+                                .font(.customfont(.medium, fontSize: 14))
+                                .foregroundColor(.primaryText)
+                        }
+                    } // V
+                    .padding(.horizontal, 20)
+                    Divider()
+                        .padding(.horizontal, 20)
+                } // for
+            } // else
         }
         .padding(.horizontal, 20)
         .opacity(isContentVisible ? 1.0 : 0.0)
         .offset(y: isContentVisible ? 0 : 20)
         .animation(.easeInOut(duration: 0.5).delay(0.7), value: isContentVisible)
-    }
-    
-    // MARK: - Add to Cart Button View
+    } /*
+       listArr = [ReviewModel(id: 101, rating: 4.0, comment: "Great taste!", createdAt: ...), ReviewModel(id: 102, rating: 5.0, ...)]
+       */
+
     private var addToCartButtonView: some View {
         Button(action: {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
                 CartViewModel.shared.serviceCallAddToCart(prodId: detailVM.pObj.id, qty: detailVM.qty) { isDone, msg in
-                    detailVM.qty = 1 // Reset quantity after adding to cart
+                    detailVM.qty = 1
                     detailVM.errorMessage = msg
                     detailVM.showError = true
                 }
@@ -327,9 +447,10 @@ struct ProductDetailView: View {
         .opacity(isContentVisible ? 1.0 : 0.0)
         .offset(y: isContentVisible ? 0 : 20)
         .animation(.easeInOut(duration: 0.5).delay(0.8), value: isContentVisible)
+        .padding(.horizontal, 20)
+        .padding(.bottom, 2)
     }
-    
-    // MARK: - Top Bar View
+
     private var topBarView: some View {
         VStack {
             HStack {
@@ -345,13 +466,12 @@ struct ProductDetailView: View {
                         .clipShape(Circle())
                         .shadow(radius: 3)
                 }
-                
+
                 Spacer()
-                
+
                 Button(action: {
                     withAnimation(.spring()) {
                         if isFavorite {
-                            // Remove from favorites
                             favVM.removeFavorite(productId: detailVM.pObj.id) { success, message in
                                 if success {
                                     isFavorite = false
@@ -363,22 +483,15 @@ struct ProductDetailView: View {
                                 }
                             }
                         } else {
-                            // Add to favorites
                             favVM.addFavorite(productId: detailVM.pObj.id) { success, message in
                                 if success {
                                     isFavorite = true
                                     alertMessage = "Added to favorites."
                                     showAlert = true
                                 } else {
-                                    // Kiểm tra thủ công xem sản phẩm đã được thêm chưa
                                     isFavorite = favVM.listArr.contains { $0.id == detailVM.pObj.id }
-                                    if isFavorite {
-                                        alertMessage = "Added to favorites."
-                                        showAlert = true
-                                    } else {
-                                        alertMessage = message
-                                        showAlert = true
-                                    }
+                                    alertMessage = isFavorite ? "Added to favorites." : message
+                                    showAlert = true
                                 }
                             }
                         }
@@ -394,9 +507,19 @@ struct ProductDetailView: View {
                         .clipShape(Circle())
                         .shadow(radius: 3)
                 }
-                
+/*
+ Nhấn nút Favorite:
+     isFavorite = false → Chạy addFavorite(5).
+     API trả về: {"success": true, "message": "Added successfully"}.
+     isFavorite = true, icon đổi thành "heart.fill" đỏ, alert: "Added to favorites."
+ Nhấn lại:
+     isFavorite = true → Chạy removeFavorite(5).
+     API trả về: {"success": true, "message": "Removed successfully"}.
+     isFavorite = false, icon đổi thành "heart" xám, alert: "Removed from favorites."
+ 
+ */
                 Button(action: {
-                    // Handle sharing (if implemented)
+                    // Xu ly chia se (neu duoc trien khai)
                 }) {
                     Image("share")
                         .resizable()
@@ -407,17 +530,39 @@ struct ProductDetailView: View {
                         .clipShape(Circle())
                         .shadow(radius: 3)
                 }
-            }
+            } // HStack
             .padding(.top, .topInsets)
             .padding(.horizontal, 20)
-            
+
             Spacer()
         }
     }
-}
+} // struct
+
 
 #Preview {
     NavigationView {
         ProductDetailView(productId: 1)
     }
 }
+/*
+ [
+   {
+     "id": 101,
+     "userId": 1,
+     "productId": 5,
+     "rating": 4.0,
+     "comment": "Great taste!",
+     "createdAt": "2025-07-14T10:00:00Z"
+   },
+   {
+     "id": 102,
+     "userId": 2,
+     "productId": 5,
+     "rating": 5.0,
+     "comment": "Very fresh and juicy!",
+     "createdAt": "2025-07-13T15:30:00Z"
+   }
+ ]
+ 
+ */

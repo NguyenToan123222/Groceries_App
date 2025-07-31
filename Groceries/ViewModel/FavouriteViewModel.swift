@@ -30,17 +30,27 @@ class FavouriteViewModel: ObservableObject {
             method: .get,
             path: Globs.SV_FAVORITE_LIST,
             parameters: [:],
-            withSuccess: { [weak self] responseObj in
+            withSuccess: { [weak self] responseObj in // giữ self nhẹ, có thể bị xóa nếu không cần
                 guard let self = self else { return }
                 print("Favorites API Response: \(String(describing: responseObj))")
                 if let favoritesArray = responseObj as? NSArray {
                     DispatchQueue.main.async {
-                        self.listArr = favoritesArray.compactMap { obj in
-                            guard let dict = obj as? NSDictionary else {
+                        self.listArr = favoritesArray.compactMap { obj in // list Product Model
+                            guard let dict = obj as? NSDictionary
+                            else {
                                 print("Failed to parse object as NSDictionary: \(obj)")
                                 return nil
                             }
                             return ProductModel(dict: dict)
+                            /*
+                             Bước 1: Duyệt từng obj trong favoritesArray.
+                             Bước 2: Thử ép obj thành NSDictionary.
+                               - Nếu thất bại, trả nil (bỏ qua phần tử).
+                               - Nếu thành công, tạo ProductModel từ dict.
+                             Bước 3: Thu thập các ProductModel (bỏ qua nil) thành mảng [ProductModel].
+                               - compactMap thu thập: [ProductModel(id: 456, name: "Táo"), ProductModel(id: 459, name: "Dứa")].
+                             Bước 4: Gán mảng vào listArr.
+                             */
                         }
                         print("Favorites list updated: \(self.listArr)")
                         completion?()
@@ -76,7 +86,7 @@ class FavouriteViewModel: ObservableObject {
             }
             return
         }
-        
+        // /api/favorites/add/{productId}) :  (như /api/favorites/add/456).
         let path = Globs.SV_ADD_FAVORITE.replacingOccurrences(of: "{productId}", with: "\(productId)")
         MainViewModel.shared.callApiWithTokenCheck(
             method: .post,
@@ -86,10 +96,10 @@ class FavouriteViewModel: ObservableObject {
                 guard let self = self else { return }
                 print("Add Favorite API Response: \(String(describing: responseObj))")
                 
-                if let message = responseObj as? String {
+                if let message = responseObj as? String { // string
                     let success = message.lowercased().contains("added")
                     if success {
-                        self.serviceCallDetail {
+                        self.serviceCallDetail { // lấy danh sách yêu thích mới
                             completion(true, message)
                         }
                     } else {
@@ -99,16 +109,21 @@ class FavouriteViewModel: ObservableObject {
                             completion(false, message)
                         }
                     }
-                } else if let dict = responseObj as? [String: Any], let message = dict["message"] as? String {
+                } else if let dict = responseObj as? [String: Any], let message = dict["message"] as? String { // faults
+                    // dictionary: ["message": "Product already exists"]
                     DispatchQueue.main.async {
                         self.errorMessage = message
                         self.showError = true
                         completion(false, message)
                     }
-                } else {
+                } else { // another undefine || check list agian
                     self.serviceCallDetail {
                         DispatchQueue.main.async {
                             let isAdded = self.listArr.contains { $0.id == productId }
+                            /*
+                             Kiểm tra xem listArr có ProductModel với id bằng productId không.
+                             $0: Đại diện cho "mỗi" ProductModel trong listArr.
+                             */
                             if isAdded {
                                 completion(true, "Added to favorites.")
                             } else {
@@ -180,7 +195,7 @@ class FavouriteViewModel: ObservableObject {
                 } else {
                     self.serviceCallDetail {
                         DispatchQueue.main.async {
-                            let isRemoved = !self.listArr.contains { $0.id == productId }
+                            let isRemoved = !self.listArr.contains { $0.id == productId } // Kiểm tra sản phẩm không có trong listArr (nghĩa là đã xóa).
                             if isRemoved {
                                 completion(true, "Removed from favorites.")
                             } else {
@@ -196,7 +211,7 @@ class FavouriteViewModel: ObservableObject {
                 guard let self = self else { return }
                 self.serviceCallDetail {
                     DispatchQueue.main.async {
-                        let isRemoved = !self.listArr.contains { $0.id == productId }
+                        let isRemoved = !self.listArr.contains { $0.id == productId } // Kiểm tra sản phẩm không có trong listArr (nghĩa là đã xóa).
                         if isRemoved {
                             completion(true, "Removed from favorites.")
                         } else {

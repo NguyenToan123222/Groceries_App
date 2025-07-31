@@ -8,11 +8,12 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @EnvironmentObject var mainVM: MainViewModel
     @StateObject var homeVM = HomeViewModel.shared
-    @State private var animateTabBar = false // Biến để điều khiển animation của tab bar
-    @State private var animateGradient = false // Biến để điều khiển animation của gradient
+    @State private var animateTabBar = false
+    @State private var animateGradient = false
     
-    @FocusState private var isFocused: Bool
+    @FocusState private var isFocused
         
     func dismissKeyboard() {
         isFocused = false
@@ -21,8 +22,8 @@ struct MainTabView: View {
     
     var body: some View {
         ZStack {
-            // Background loang màu xanh lam nhạt
-            RadialGradient(
+            RadialGradient( // unnecessary
+
                 gradient: Gradient(colors: [
                     Color.blue.opacity(0.4),
                     Color.cyan.opacity(0.4),
@@ -34,22 +35,25 @@ struct MainTabView: View {
                 endRadius: animateGradient ? 500 : 300
             )
             .edgesIgnoringSafeArea(.all)
-            .hueRotation(.degrees(animateGradient ? 0 : 45)) // Tạo hiệu ứng chuyển động màu
+            .hueRotation(.degrees(animateGradient ? 0 : 45))
             .animation(Animation.easeInOut(duration: 5).repeatForever(autoreverses: true), value: animateGradient)
             
             // Nội dung chính
             if (homeVM.selectTab == 0) {
                 HomeView()
+                    .environmentObject(mainVM)
             } else if (homeVM.selectTab == 1) {
                 ExploreView()
+                    .environmentObject(mainVM)
             } else if (homeVM.selectTab == 2) {
                 MyCartView()
+                    .environmentObject(mainVM)
             } else if (homeVM.selectTab == 3) {
                 FavouriteView()
-            } else if (homeVM.selectTab == 4) {
-                NavigationView {
-                    AccountView()
-                }
+                    .environmentObject(mainVM)
+            } else if (homeVM.selectTab == 4) { // tran Tab
+                AccountView()
+                    .environmentObject(mainVM)
             }
             
             // Tab bar
@@ -57,10 +61,9 @@ struct MainTabView: View {
                 Spacer()
                 
                 HStack {
-                    TabButton(title: "Shop", icon: "home_tab", isSelect: homeVM.selectTab == 0) {
-                        print("Button Tab")
+                    TabButton(title: "Shop", icon: "home_tab", isSelect: homeVM.selectTab == 0) { // for animation
                         withAnimation(.spring()) {
-                            homeVM.selectTab = 0
+                            homeVM.selectTab = 0 // assign for tran Tab
                         }
                     }
                     .scaleEffect(homeVM.selectTab == 0 ? 1.2 : 1.0)
@@ -97,7 +100,7 @@ struct MainTabView: View {
                     }
                     .scaleEffect(homeVM.selectTab == 4 ? 1.2 : 1.0)
                     .animation(.easeInOut(duration: 0.3), value: homeVM.selectTab)
-                }
+                } // HStack
                 .padding(.top, 10)
                 .padding(.bottom, .bottomInsets)
                 .padding(.horizontal, 10)
@@ -107,15 +110,15 @@ struct MainTabView: View {
                 .scaleEffect(animateTabBar ? 1.0 : 0.8)
                 .opacity(animateTabBar ? 1.0 : 0.0)
                 .animation(.easeInOut(duration: 0.5), value: animateTabBar)
-            }
-        }
+            } // VStck
+        } // ZS
         .navigationTitle("")
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
         .ignoresSafeArea()
         .onAppear {
             animateTabBar = true
-            animateGradient = true // Kích hoạt animation cho gradient
+            animateGradient = true
         }
         .onTapGesture {
             dismissKeyboard()
@@ -125,8 +128,7 @@ struct MainTabView: View {
 
 struct MainTabView_Previews: PreviewProvider {
     static var previews: some View {
-        NavigationView {
-            MainTabView()
-        }
+        MainTabView()
+            .environmentObject(MainViewModel.shared)
     }
 }

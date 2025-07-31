@@ -9,278 +9,164 @@ import SDWebImageSwiftUI
 
 struct MyOrdersView: View {
     @Environment(\.presentationMode) var mode: Binding<PresentationMode>
-    
     @StateObject var myVM = MyOrdersViewModel.shared
-    
+    @State private var searchText = ""
+
     var body: some View {
-        ZStack{
-            
-            ScrollView{
+        ZStack {
+            ScrollView {
                 LazyVStack(spacing: 15) {
-                    ForEach( myVM.listArr , id: \.id, content: {
-                        myObj in
-                        
+                    ForEach(myVM.listArr, id: \.id) { myObj in
                         NavigationLink {
-                            MyOrdersDetailView(detailVM: MyOrderDetailViewModel(prodObj: myObj) )
+                            MyOrdersDetailView(detailVM: MyOrderDetailViewModel(prodObj: myObj))
                         } label: {
-                            VStack{
-                                
+                            VStack {
                                 HStack {
-                                    
-                                    Text("Order No: #")
+                                    Text("Order Code: ")
                                         .font(.customfont(.bold, fontSize: 16))
                                         .foregroundColor(.primaryText)
-                                    
-                                    
-                                    Text("\( myObj.id  )")
+
+                                    Text(myObj.orderCode)
                                         .font(.customfont(.bold, fontSize: 14))
                                         .foregroundColor(.primaryText)
                                         .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-                                    
-                                    
-                                    Text(getOrderStatus(mObj: myObj))
+
+                                    Text(myObj.status)
                                         .font(.customfont(.bold, fontSize: 16))
-                                        .foregroundColor( getOrderStatusColor(mObj: myObj) )
-                                        
+                                        .foregroundColor(getOrderStatusColor(mObj: myObj))
                                 }
-                                
+
                                 Text(myObj.createdDate.displayDate(format: "yyyy-MM-dd hh:mm a"))
                                     .font(.customfont(.bold, fontSize: 12))
                                     .foregroundColor(.secondaryText)
                                     .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-                                
-                                
-                                
+
                                 HStack {
-                                    
-                                    if let imgageUrl = myObj.images.first {
-                                        // không phải nil (tức là mảng có ít nhất một phần tử), giá trị của phần tử đầu tiên sẽ được gán vào biến imageUrl
-                                        WebImage(url: URL(string: imgageUrl ))
+                                    if let firstItem = myObj.items.first, let imageUrl = firstItem.imageUrl {
+                                        // lấy phần tử đầu tiên trong mảng (not nil)
+                                        // lấy img từ phần tử mảng đó
+                                        WebImage(url: URL(string: imageUrl))
                                             .resizable()
-                                            .indicator(.activity) // Hiển thị vòng xoay khi tải.
-                                            .transition(.fade(duration: 0.5)) //Hiệu ứng mờ dần khi tải xong.
+                                            .scaledToFill()
+                                            .frame(width: 60, height: 60)
+                                            .cornerRadius(8)
+                                            .clipped()
+                                    } else {
+                                        Image(systemName: "photo")
+                                            .resizable()
                                             .scaledToFit()
                                             .frame(width: 60, height: 60)
+                                            .foregroundColor(.gray)
                                     }
-                                    
-                                    VStack{
+
+                                    VStack {
                                         HStack {
-                                            
                                             Text("Items:")
                                                 .font(.customfont(.bold, fontSize: 16))
                                                 .foregroundColor(.primaryText)
-                                            
-                                            
-                                            Text(myObj.names ?? "")
+
+                                            Text(myObj.items.map { $0.productName }.joined(separator: ", "))
+                                            // Apple, Orange, Milk
                                                 .font(.customfont(.medium, fontSize: 14))
                                                 .foregroundColor(.secondaryText)
                                                 .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-                                            
                                         }
-                                        
+
                                         HStack {
-                                            
-                                            Text("Delivery Type:")
+                                            Text("Payment Method:")
                                                 .font(.customfont(.bold, fontSize: 16))
                                                 .foregroundColor(.primaryText)
-                                            
-                                            
-                                            Text( self.getDeliveryType(mObj: myObj) )
+
+                                            Text(myObj.paymentMethod)
                                                 .font(.customfont(.medium, fontSize: 14))
                                                 .foregroundColor(.secondaryText)
                                                 .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-                                            
                                         }
-                                        
+
                                         HStack {
-                                            
-                                            Text("Payment Type:")
-                                                .font(.customfont(.bold, fontSize: 16))
-                                                .foregroundColor(.primaryText)
-                                            
-                                            
-                                            Text(getPaymentType(mObj: myObj))
-                                                .font(.customfont(.medium, fontSize: 14))
-                                                .foregroundColor(.secondaryText)
-                                                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-                                            
-                                        }
-                                        
-                                        HStack {
-                                            
                                             Text("Payment Status:")
                                                 .font(.customfont(.bold, fontSize: 16))
                                                 .foregroundColor(.primaryText)
-                                            
-                                            
-                                            Text( getPaymentStatus(mObj: myObj))
+
+                                            Text(myObj.isPaid ? "Paid" : "Unpaid")
                                                 .font(.customfont(.medium, fontSize: 14))
-                                                .foregroundColor( getPaymentStatusColor(mObj: myObj))
+                                                .foregroundColor(myObj.isPaid ? .green : .red)
                                                 .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-                                            
                                         }
-                                        
                                     }
-                                    
-                                }
-                                
-                            } // Vstack button
-                        }
-                        .padding(15)
-                        .background(Color.white)
-                        .cornerRadius(5)
-                        .shadow(color: Color.black.opacity(0.15), radius: 2)
-                        
-                        
-                        
-                    }) // ForEach
-                }// LazyVStack
+                                } // H 2
+                            } // Vstack
+                            .padding(15)
+                            .background(Color.white)
+                            .cornerRadius(5)
+                            .shadow(color: Color.black.opacity(0.15), radius: 2)
+                            .onAppear {
+                                myVM.loadMoreIfNeeded(currentItem: myObj)
+                            }
+                        } // Label
+                    } // For
+
+                    if myVM.isLoadingMore {
+                        ProgressView()
+                            .padding()
+                    }
+                } // LazyStack
                 .padding(20)
                 .padding(.top, .topInsets + 46)
                 .padding(.bottom, .bottomInsets + 60)
-                
-            }// ScrollView
-            
-            
+            } // Scroll
+
             VStack {
-                
-                HStack{
-                    
+                HStack {
                     Button {
                         mode.wrappedValue.dismiss()
                     } label: {
-                        Image("back")
+                        Image(systemName: "arrow.left")
                             .resizable()
                             .scaledToFit()
                             .frame(width: 20, height: 20)
                     }
-                    
-                    
-                    
+
                     Spacer()
-                    
-                    Text("My Ordres")
+
+                    Text("My Orders")
                         .font(.customfont(.bold, fontSize: 20))
                         .frame(height: 46)
+
                     Spacer()
-                    
-                    
-                    
-                }
+                }// Hstack
+                
                 .padding(.top, .topInsets)
                 .padding(.horizontal, 20)
                 .background(Color.white)
-                .shadow(color: Color.black.opacity(0.2),  radius: 2 )
-                
+                .shadow(color: Color.black.opacity(0.2), radius: 2)
+
                 Spacer()
-                
-            }
+            } // Vstack
             
-            
-            
-        }
-        // ZStack
-        .onAppear{
-            
+        } // Zstack
+        .onAppear {
+            myVM.refreshOrders() // Làm mới danh sách khi view xuất hiện
         }
         .navigationTitle("")
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
         .ignoresSafeArea()
-        
-    } //View
-    
-    func getOrderStatus(mObj: MyOrderModel) -> String {
-        switch mObj.orderStatus {
-        case 1:
-            return "Placed"
-        case 2:
-            return "Accepted";
-        case 3:
-            return "Delivered";
-        case 4:
-            return "Cancel";
-        case 5:
-            return "Declined";
-        default:
-            return "";
-        }
     }
-    
-    func getDeliveryType(mObj: MyOrderModel) -> String {
-        switch mObj.deliverType {
-        case 1:
-              return "Delivery";
-            case 2:
-              return "Collection";
-        default:
-            return "";
-        }
-    }
-    
-    func getPaymentType(mObj: MyOrderModel) -> String {
-        switch mObj.paymentType {
-        case 1:
-            return "Cash On Delivery";
-        case 2:
-            return "Online Card Payment";
-        default:
-            return "";
-        }
-    }
-    
-    func getPaymentStatus(mObj: MyOrderModel) -> String {
-        switch mObj.paymentStatus {
-        case 1:
-            return "Processing";
-        case 2:
-            return "Success";
-        case 3:
-            return "Fail";
-        case 4:
-            return "Refunded";
-        default:
-            return "";
-        }
-    }
-    
-    func getPaymentStatusColor(mObj: MyOrderModel) -> Color {
-        
-        if (mObj.paymentType == 1) {
-            return Color.orange;
-        }
-        
-        switch mObj.paymentStatus {
-        case 1:
-            return Color.blue;
-        case 2:
-            return Color.green;
-        case 3:
-            return Color.red;
-        case 4:
-            return Color.green;
-        default:
-            return Color.white;
-        }
-    }
-    
+
     func getOrderStatusColor(mObj: MyOrderModel) -> Color {
-        
-     
-        
-        switch mObj.orderStatus {
-        case 1:
-              return Color.blue;
-            case 2:
-              return Color.green;
-            case 3:
-              return Color.green;
-            case 4:
-              return Color.red;
-            case 5:
-              return Color.red;
-            default:
-              return Color.primaryApp;        }
+        switch mObj.status {
+        case "PENDING":
+            return Color.blue
+        case "COMPLETED":
+            return Color.green
+        case "CANCELLED":
+            return Color.red
+        case "AWAITING_PICKUP":
+            return Color.orange
+        default:
+            return Color.gray
+        }
     }
 }
 
@@ -289,6 +175,116 @@ struct MyOrdersView_Previews: PreviewProvider {
         NavigationView {
             MyOrdersView()
         }
-       
     }
 }
+
+/*
+ 
+ {
+   "content": [
+     {
+       "id": 1,
+       "orderCode": "ORD001",
+       "totalPrice": 150.75,
+       "status": "PENDING",
+       "paymentMethod": "MOMO",
+       "isPaid": false,
+       "createdAt": "2025-03-20T10:30:00Z",
+       "items": [
+         {
+           "id": 101,
+           "productId": "P101",
+           "productName": "Apple",
+           "imageUrl": "https://example.com/images/apple.jpg",
+           "quantity": 2,
+           "unitPrice": 2.50
+         },
+         {
+           "id": 102,
+           "productId": "P102",
+           "productName": "Orange Juice",
+           "imageUrl": "https://example.com/images/orange_juice.jpg",
+           "quantity": 1,
+           "unitPrice": 3.25
+         }
+       ],
+       "street": "123 Main Street",
+       "province": "Hanoi",
+       "district": "Ba Dinh",
+       "ward": "Ngoc Ha"
+     },
+     {
+       "id": 2,
+       "orderCode": "ORD002",
+       "totalPrice": 89.99,
+       "status": "COMPLETED",
+       "paymentMethod": "COD",
+       "isPaid": true,
+       "createdAt": "2025-03-19T15:45:00Z",
+       "items": [
+         {
+           "id": 103,
+           "productId": "P103",
+           "productName": "Milk",
+           "imageUrl": "https://example.com/images/milk.jpg",
+           "quantity": 3,
+           "unitPrice": 1.99
+         }
+       ],
+       "street": "456 Elm Street",
+       "province": "Ho Chi Minh City",
+       "district": "District 1",
+       "ward": "Ben Nghe"
+     },
+     {
+       "id": 3,
+       "orderCode": "ORD003",
+       "totalPrice": 200.00,
+       "status": "AWAITING_PICKUP",
+       "paymentMethod": "PAYPAL",
+       "isPaid": true,
+       "createdAt": "2025-03-18T09:15:00Z",
+       "items": [
+         {
+           "id": 104,
+           "productId": "P104",
+           "productName": "Bread",
+           "imageUrl": "https://example.com/images/bread.jpg",
+           "quantity": 1,
+           "unitPrice": 2.00
+         }
+       ],
+       "street": "789 Oak Street",
+       "province": "Da Nang",
+       "district": "Hai Chau",
+       "ward": "Thanh Binh"
+     }
+   ],
+   "pageable": {
+     "pageNumber": 0,
+     "pageSize": 5,
+     "sort": {
+       "sorted": true,
+       "unsorted": false,
+       "empty": false
+     },
+     "offset": 0,
+     "paged": true,
+     "unpaged": false
+   },
+   "totalPages": 1,
+   "totalElements": 3,
+   "last": true,
+   "numberOfElements": 3,
+   "size": 5,
+   "number": 0,
+   "sort": {
+     "sorted": true,
+     "unsorted": false,
+     "empty": false
+   },
+   "first": true,
+   "empty": false
+ }
+ 
+ */

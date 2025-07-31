@@ -23,7 +23,7 @@ struct LineTextField: View {
             TextField(placeholder, text: $txt)
                 .keyboardType(keyboardType)
                 .textContentType(.none) // Tắt gợi ý và tìm kiếm emoji
-                .autocapitalization(.none)
+                .autocapitalization(.none) // Tắt tự động viết hoa đầu câu
                 .disableAutocorrection(true) // Tắt tự động sửa lỗi
                 .textInputAutocapitalization(.never) // Tắt tự động viết hoa
                 .autocorrectionDisabled(true) // Tắt tự động sửa lỗi (iOS 15+)
@@ -59,7 +59,7 @@ struct LineSecureField: View {
             if isShowPassword {
                 TextField(placeholder, text: $txt)
                     .textContentType(.none) // Tắt gợi ý và tìm kiếm emoji
-                    .autocapitalization(.none)
+                    .autocapitalization(.none) // Tắt tự động viết hoa đầu câu
                     .disableAutocorrection(true) // Tắt tự động sửa lỗi
                     .textInputAutocapitalization(.never) // Tắt tự động viết hoa
                     .autocorrectionDisabled(true) // Tắt tự động sửa lỗi (iOS 15+)
@@ -68,7 +68,7 @@ struct LineSecureField: View {
             } else {
                 SecureField(placeholder, text: $txt)
                     .textContentType(.none) // Tắt gợi ý và tìm kiếm emoji
-                    .autocapitalization(.none)
+                    .autocapitalization(.none) // Tắt tự động viết hoa đầu câu
                     .disableAutocorrection(true) // Tắt tự động sửa lỗi
                     .textInputAutocapitalization(.never) // Tắt tự động viết hoa
                     .autocorrectionDisabled(true) // Tắt tự động sửa lỗi (iOS 15+)
@@ -83,7 +83,7 @@ struct LineSecureField: View {
 struct LineSecureField_Previews: PreviewProvider {
     static var previews: some View {
         @State var txt: String = ""
-        @State var isShowPassword: Bool = false
+        @State var isShowPassword: Bool = true
         
         LineSecureField(txt: $txt, isShowPassword: $isShowPassword)
             .padding()

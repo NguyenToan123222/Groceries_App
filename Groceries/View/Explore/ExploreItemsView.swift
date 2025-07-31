@@ -9,16 +9,16 @@ import SwiftUI
 
 struct ExploreItemsView: View {
     @Environment(\.presentationMode) var mode: Binding<PresentationMode>
-    @StateObject var itemsVM: ExploreItemViewModel
+    @StateObject var itemsVM: ExploreItemViewModel //khai báo kiểu để nơi khác cung cấp dữ liệuu
     
     var columns = [
-        GridItem(.flexible(), spacing: 15),
-        GridItem(.flexible(), spacing: 15)
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8)
     ]
     
     var body: some View {
         ZStack {
-            VStack {
+            VStack(spacing: 0) { // Đặt spacing = 0 để loại bỏ khoảng cách mặc định giữa các thành phần trong VStack
                 // Tiêu đề và nút quay lại
                 HStack {
                     Button {
@@ -46,30 +46,38 @@ struct ExploreItemsView: View {
                             .scaledToFit()
                             .frame(width: 20, height: 20)
                     }
-                }
-                .padding(.top, .topInsets)
+                } // H
+                .padding(.top, .topInsets - 10) // Giảm khoảng cách với topInsets
                 .padding(.horizontal, 20)
                 
                 // Danh sách sản phẩm
                 ScrollView {
-                    LazyVGrid(columns: columns, spacing: 15) {
-                        ForEach(itemsVM.listArr, id: \.id) { pObj in
-                            NavigationLink(destination: ProductDetailView(productId: pObj.id)) {
-                                ProductCell(pObj: pObj, didAddCart: {
-                                    CartViewModel.shared.serviceCallAddToCart(prodId: pObj.id, qty: 1) { isDone, msg in
-                                        itemsVM.errorMessage = msg
-                                        itemsVM.showError = true
-                                    }
-                                })
-                            }
-                        }
+                    if itemsVM.listArr.isEmpty {
+                        Text("No products available in this category")
+                            .font(.customfont(.medium, fontSize: 16))
+                            .foregroundColor(.gray)
+                            .padding(.vertical, 20)
+                            .padding(.horizontal, 20)
+                    } else {
+                        LazyVGrid(columns: columns, spacing: 8) {
+                            ForEach(itemsVM.listArr, id: \.id) { pObj in // itemsVM.listArr = [ProductModel(id: 5, name: "Apple", price: 2.50, ...), ProductModel(id: 1, name: "Fresh Milk", price: 3.00, ...)]
+                                NavigationLink(destination: ProductDetailView(productId: pObj.id)) {
+                                    ProductCell(pObj: pObj, didAddCart: {
+                                        CartViewModel.shared.serviceCallAddToCart(prodId: pObj.id, qty: 1) { isDone, msg in
+                                            itemsVM.errorMessage = msg
+                                            itemsVM.showError = true
+                                        }
+                                    }) // productcell
+                                } // Navi
+                            } // For
+                        } // Lazy
+                        .padding(.horizontal, 10)
+                        .padding(.top, 5) // Chỉ giữ padding phía trên, bỏ padding phía dưới
+                        .padding(.bottom, .bottomInsets + 30)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .padding(.bottom, .bottomInsets + 60)
                 }
-            }
-        }
+            } // V
+        } // Z
         .navigationTitle("")
         .navigationBarBackButtonHidden(true)
         .navigationBarHidden(true)
@@ -79,7 +87,6 @@ struct ExploreItemsView: View {
         }
     }
 }
-
 struct ExploreItemsView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {
@@ -92,3 +99,51 @@ struct ExploreItemsView_Previews: PreviewProvider {
         }
     }
 }
+
+/*
+ {
+   "data": {
+     "categoryId": 1,
+     "categoryName": "Fresh Fruits & Vegetable",
+     "products": [
+       {
+         "id": 5,
+         "name": "Apple",
+         "price": 2.50,
+         "image": "https://example.com/assets/images/apple.jpg",
+         "description": "Fresh and juicy apples",
+         "stock": 100,
+         "discountPercentage": 20.0,
+         "originalPrice": 3.00,
+         "startDate": "2025-07-01T00:00:00Z",
+         "endDate": "2025-07-15T23:59:59Z"
+       },
+       {
+         "id": 2,
+         "name": "Banana",
+         "price": 1.50,
+         "image": "https://example.com/assets/images/banana.jpg",
+         "description": "Ripe yellow bananas",
+         "stock": 150,
+         "discountPercentage": 10.0,
+         "originalPrice": 1.67,
+         "startDate": "2025-07-10T00:00:00Z",
+         "endDate": "2025-07-20T23:59:59Z"
+       },
+       {
+         "id": 7,
+         "name": "Orange",
+         "price": 2.00,
+         "image": "https://example.com/assets/images/orange.jpg",
+         "description": "Sweet and tangy oranges",
+         "stock": 80,
+         "discountPercentage": null,
+         "originalPrice": null,
+         "startDate": null,
+         "endDate": null
+       }
+     ],
+     "count": 3
+   }
+ }
+ */

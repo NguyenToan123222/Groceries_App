@@ -7,6 +7,7 @@
 import SwiftUI
 
 struct NotificationView: View {
+    
     @Environment(\.presentationMode) var mode: Binding<PresentationMode>
     
     @StateObject var notiVM = NotificationViewModel.shared
@@ -33,7 +34,7 @@ struct NotificationView: View {
                                     .font(.customfont(.regular, fontSize: 12))
                                     .foregroundColor(.secondaryText)
                                 
-                            }
+                            } // Hstack
                             
                        
                                 
@@ -43,7 +44,7 @@ struct NotificationView: View {
                                     .multilineTextAlignment( .leading)
                                     .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                                 
-                            }
+                            } // Vstack
                          
                         .padding(15)
                         .background( nObj.isRead == 1 ? Color.placeholder : Color.white)
@@ -52,13 +53,13 @@ struct NotificationView: View {
                        
 
 
-                    })
-                }
+                    }) // For
+                } // Lazy
                 .padding(20)
                 .padding(.top, .topInsets + 46)
                 .padding(.bottom, .bottomInsets + 60)
 
-            }
+            } // Scroll
             
             
             VStack {
@@ -108,7 +109,8 @@ struct NotificationView: View {
             
             
             
-        }
+        } // Zstack
+        
 //        .alert(isPresented: $notiVM.showError) {
 //            Alert(title: Text(Globs.AppName), message: Text(notiVM.errorMessage), dismissButton: .default(Text("Ok")))
 //        }

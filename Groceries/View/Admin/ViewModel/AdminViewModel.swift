@@ -1,17 +1,15 @@
-//
-//  AdminViewModel.swift
-//  Groceries
-//
-//  Created by Nguyễn Toàn on 26/3/25.
-
 import SwiftUI
 
 class AdminViewModel: ObservableObject {
+    
     @Published var productList: [ProductModel] = []
     @Published var bestSellingList: [ProductModel] = []
     @Published var exclusiveOfferList: [ProductModel] = []
     @Published var categories: [CategoryModel] = []
     @Published var brands: [BrandModel] = []
+    @Published var nutritions: [NutritionModel] = []
+    @Published var customerAccounts: [UserModel] = [] // New property for customer accounts
+    
     @Published var showError = false
     @Published var errorMessage = ""
     @Published var showSuccess = false
@@ -25,19 +23,226 @@ class AdminViewModel: ObservableObject {
         fetchProducts()
         fetchBestSelling()
         fetchExclusiveOffers()
+        fetchNutritions()
+        fetchCustomerAccounts() // Fetch accounts on initialization
     }
 
-    private func resetAlerts() {
+    private func resetAlerts() { // reset
         showError = false
         showSuccess = false
         errorMessage = ""
         successMessage = ""
     }
 
+    // Existing methods...
+
+    func fetchCustomerAccounts() {
+        resetAlerts()
+        let path = "\(Globs.BASE_URL)users" // Globs.BASE_URL = "https://api.example.com/users
+        
+        MainViewModel.shared.callApiWithTokenCheck(
+            method: .get,
+            path: path,
+            parameters: [:],
+            withSuccess: { responseObj in
+                Task { @MainActor in // đảm bảo code chạy trên main thread, cần thiết để cập nhật @Published properties (như customerAccounts) an toàn
+                    print("Raw API response: \(responseObj)") // Thêm log để kiểm tra dữ liệu gốc
+                    if let response = responseObj as? NSArray {
+                        let customers = response.compactMap { obj -> UserModel? in
+                            guard let dict = obj as? NSDictionary,
+                                  let roleDict = dict["role"] as? NSDictionary,
+                                  let roleName = roleDict["roleName"] as? String,
+                                  roleName.lowercased() == "customer" else {
+                                return nil
+                            }
+                            let user = UserModel(dict: dict) // user = UserModel(id: 101, fullName: "John Doe", email: "john@example.com", role: "customer", createdAt: Date("2025-07-01T10:00:00Z"))
+                            print("Parsed user: \(user.fullName), Role: \(user.role)") // Log người dùng được ánh xạ
+                            return user
+                        }
+                        self.customerAccounts = customers // arrays of customers [UserModel]
+                        print("Fetched customer accounts: \(self.customerAccounts.map { $0.fullName })")
+                    } else {
+                        self.errorMessage = "Failed to fetch customer accounts"
+                        self.showError = true
+                    }
+                }
+            },
+            failure: { error in
+                Task { @MainActor in
+                    self.errorMessage = error?.localizedDescription ?? "Network error: Failed to fetch customer accounts"
+                    self.showError = true
+                }
+            }
+        )
+    }
+/*
+ {
+   "status": "success",
+   "data": [
+     {
+       "id": 101,
+       "fullName": "John Doe",
+       "email": "john@example.com",
+       "role": {
+         "id": 2,
+         "roleName": "customer"
+       },
+       "createdAt": "2025-07-01T10:00:00Z"
+     },
+     {
+       "id": 102,
+       "fullName": "Jane Smith",
+       "email": "jane@example.com",
+       "role": {
+         "id": 2,
+         "roleName": "customer"
+       },
+       "createdAt": "2025-07-02T12:00:00Z"
+     },
+     {
+       "id": 103,
+       "fullName": "Admin User",
+       "email": "admin@example.com",
+       "role": {
+         "id": 1,
+         "roleName": "admin"
+       },
+       "createdAt": "2025-07-03T08:00:00Z"
+     }
+   ],
+   "message": "Users retrieved successfully"
+ }
+ */
+    func deleteCustomerAccount(id: Int, completion: @escaping (Bool) -> Void) {
+        resetAlerts()
+        let path = "\(Globs.BASE_URL)users/delete/\(id)"
+        
+        MainViewModel.shared.callApiWithTokenCheck(
+            method: .delete,
+            path: path,
+            parameters: [:],
+            withSuccess: { responseObj in
+                Task { @MainActor in
+                    if let response = responseObj as? NSDictionary,
+                       let message = response["message"] as? String,
+                       message == "User deleted successfully" {
+                        self.customerAccounts.removeAll { $0.id == id }
+                        // Loại bỏ tất cả các UserModel trong mảng customerAccounts: [UserModel] có id khớp với tham số id được truyền vào hàm.
+                        self.successMessage = "Account deleted successfully"
+                        self.showSuccess = true
+                        completion(true)
+                    } else {
+                        self.errorMessage = "Failed to delete account"
+                        self.showError = true
+                        completion(false)
+                    }
+                }
+            },
+            failure: { error in
+                Task { @MainActor in
+                    self.errorMessage = error?.localizedDescription ?? "Network error: Failed to delete account"
+                    self.showError = true
+                    completion(false)
+                }
+            }
+        )
+    }
+    /*
+     {
+         "status": "success",
+         "message": "User deleted successfully"
+     }
+     {
+         "status": "error",
+         "message": "User not found"
+     }
+     */
+
+    // Existing methods (unchanged)...
+    func addExclusiveOffer(discountPercentage: Double, startDate: Date, endDate: Date, productId: Int, completion: @escaping (Bool) -> Void) {
+        resetAlerts()
+        
+        let offerParams: [String: Any] = [
+            "discountPercentage": discountPercentage,
+            "startDate": ISO8601DateFormatter().string(from: startDate),
+            "endDate": ISO8601DateFormatter().string(from: endDate)
+            /*
+             discountPercentage = 20.0
+             startDate = Date("2025-07-20T00:00:00Z") // 20/07/2025
+             endDate = Date("2025-07-30T00:00:00Z")   // 30/07/2025
+             */
+        ]
+        
+        MainViewModel.shared.callApiWithTokenCheck(
+            method: .post,
+            path: Globs.SV_EXCLUSIVE_OFFER,
+            parameters: offerParams as NSDictionary,
+            withSuccess: { responseObj in
+                if let response = responseObj as? NSDictionary,
+                   let offerId = response["id"] as? Int {
+                    let productParams: [String: Any] = [
+                        "productId": productId
+                    ]
+                    
+                    MainViewModel.shared.callApiWithTokenCheck(
+                        method: .post,
+                        path: "\(Globs.SV_EXCLUSIVE_OFFER)/\(offerId)/products", // POST https://api.example.com/exclusive-offers/123/products | Body: {"productId": 456}
+                        parameters: productParams as NSDictionary,
+                        withSuccess: { productResponse in
+                            if productResponse != nil { // {"status": "success", "message": "Product added to offer successfully"}
+                                DispatchQueue.main.async {
+                                    self.fetchExclusiveOffers()
+                                    self.successMessage = "Exclusive offer added successfully"
+                                    self.showSuccess = true
+                                    NotificationCenter.default.post(name: Self.productsUpdatedNotification, object: nil)
+                                    // Gửi thông báo với tên productsUpdatedNotification để thông báo cho các thành phần khác (như view) rằng danh sách sản phẩm hoặc ưu đãi đã được cập nhật.
+                                    completion(true)
+                                }
+                            } else {
+                                DispatchQueue.main.async {
+                                    self.errorMessage = "Failed to add product to offer"
+                                    self.showError = true
+                                    completion(false)
+                                }
+                            }
+                        },
+                        failure: { error in
+                            DispatchQueue.main.async {
+                                self.errorMessage = error?.localizedDescription ?? "Network error: Failed to add product to offer"
+                                self.showError = true
+                                completion(false)
+                            }
+                        }
+                    )
+                } else {
+                    DispatchQueue.main.async {
+                        self.errorMessage = "Failed to create offer"
+                        self.showError = true
+                        completion(false)
+                    }
+                }
+            },
+            failure: { error in
+                DispatchQueue.main.async {
+                    self.errorMessage = error?.localizedDescription ?? "Network error: Failed to create offer"
+                    self.showError = true
+                    completion(false)
+                }
+            }
+        )
+    }
+/*
+ {
+     "status": "success",
+     "id": 123,
+     "message": "Exclusive offer created successfully"
+ }
+ */
     func fetchProducts() {
         resetAlerts()
         let timestamp = String(Date().timeIntervalSince1970)
-        let pathWithTimestamp = "\(Globs.SV_HOME)?t=\(timestamp)"
+        let pathWithTimestamp = "\(Globs.SV_HOME)?t=\(timestamp)&size=200"
+        // pathWithTimestamp = "https://api.example.com/products?t=1753018680&size=200" | limit 200 prod
         
         ServiceCall.get(path: pathWithTimestamp) { responseObj in
             if let response = responseObj as? NSDictionary,
@@ -55,6 +260,27 @@ class AdminViewModel: ObservableObject {
             self.showError = true
         }
     }
+    /*
+     {
+         "status": "success",
+         "content": [
+             {
+                 "id": 101,
+                 "name": "T-Shirt",
+                 "price": 19.99,
+                 "category": "Clothing"
+             },
+             {
+                 "id": 102,
+                 "name": "Jeans",
+                 "price": 49.99,
+                 "category": "Clothing"
+             }
+         ],
+         "message": "Products retrieved successfully"
+     }
+     
+     */
 
     func fetchBestSelling() {
         resetAlerts()
@@ -77,69 +303,166 @@ class AdminViewModel: ObservableObject {
             self.showError = true
         }
     }
+    /*
+     [
+         {
+             "id": 101,
+             "name": "T-Shirt",
+             "price": 19.99,
+             "category": "Clothing"
+         },
+         {
+             "id": 103,
+             "name": "Sneakers",
+             "price": 89.99,
+             "category": "Footwear"
+         }
+     ]
+     */
 
+    
+    /* [
+     ProductModel(id: 101, name: "T-Shirt", unitName: "Piece", unitValue: 1.0, imageUrl: "https://example.com/tshirt.jpg", description: "Cotton T-Shirt", category: "Clothing", brand: "Nike", stock: 100, avgRating: 4.5, startDate: nil, endDate: nil, totalSold: 500, nutritionValues: [])
+ ]
+     */
     func fetchExclusiveOffers() {
         resetAlerts()
         let timestamp = String(Date().timeIntervalSince1970)
         let pathWithTimestamp = "\(Globs.SV_EXCLUSIVE_OFFER)/active?t=\(timestamp)"
         
-        ServiceCall.get(path: pathWithTimestamp) { responseObj in
-            if let response = responseObj as? NSDictionary {
-                debugPrint("Admin Exclusive Offers Response: \(response)")
-                if let content = response.value(forKey: "content") as? NSArray {
-                    var products: [ProductModel] = []
-                    for offer in content {
-                        if let offerDict = offer as? NSDictionary,
-                           let offerProducts = offerDict["products"] as? NSArray {
-                            for product in offerProducts {
-                                if let productDict = product as? NSDictionary {
-                                    // Ánh xạ các trường từ OfferProductResponseDTO sang định dạng ProductModel mong đợi
-                                    var mappedDict: [String: Any] = [:]
-                                    mappedDict["id"] = productDict["productId"] as? Int ?? 0
-                                    mappedDict["name"] = productDict["productName"] as? String ?? ""
-                                    mappedDict["price"] = productDict["originalPrice"] as? Double ?? 0.0
-                                    mappedDict["offerPrice"] = productDict["offerPrice"] as? Double
-
-                                    // Tìm sản phẩm trong productList để lấy các trường thiếu
-                                    if let productId = mappedDict["id"] as? Int,
-                                       let matchingProduct = self.productList.first(where: { $0.id == productId }) {
-                                        mappedDict["unitName"] = matchingProduct.unitName
-                                        mappedDict["unitValue"] = matchingProduct.unitValue
-                                        mappedDict["imageUrl"] = matchingProduct.imageUrl
-                                        mappedDict["description"] = matchingProduct.description
-                                        mappedDict["category"] = matchingProduct.category
-                                        mappedDict["brand"] = matchingProduct.brand
-                                        mappedDict["stock"] = matchingProduct.stock
-                                        mappedDict["avgRating"] = matchingProduct.avgRating
-                                        mappedDict["startDate"] = matchingProduct.startDate?.iso8601String()
-                                        mappedDict["endDate"] = matchingProduct.endDate?.iso8601String()
-                                        mappedDict["totalSold"] = matchingProduct.totalSold
-                                        mappedDict["nutritionValues"] = matchingProduct.nutritionValues.map { ["nutritionId": $0.nutritionId, "value": String($0.value)] }
-                                    }
-
-                                    let productModel = ProductModel(dict: mappedDict as NSDictionary)
-                                    products.append(productModel)
+        MainViewModel.shared.callApiWithTokenCheck(
+            method: .get,
+            path: pathWithTimestamp,
+            parameters: [:],
+            withSuccess: { responseObj in
+                Task { @MainActor in
+                    if let response = responseObj as? NSDictionary {
+                        debugPrint("Admin Exclusive Offers Response: \(response)")
+                        if let content = response.value(forKey: "content") as? NSArray {
+                            var products: [ProductModel] = []
+                            var uniqueProductIds: Set<Int> = []
+                            
+                            for offer in content {
+                                if let offerDict = offer as? NSDictionary,
+                                   let offerProducts = offerDict["products"] as? NSArray {
+                                    for product in offerProducts {
+                                        if let productDict = product as? NSDictionary,
+                                           let productId = productDict["productId"] as? Int {
+                                            if !uniqueProductIds.contains(productId) {
+                                                uniqueProductIds.insert(productId)
+                                                
+                                                var mappedDict: [String: Any] = [:]
+                                                mappedDict["id"] = productId
+                                                mappedDict["name"] = productDict["productName"] as? String ?? ""
+                                                mappedDict["price"] = productDict["originalPrice"] as? Double ?? 0.0
+                                                mappedDict["offerPrice"] = productDict["offerPrice"] as? Double
+                                                
+                                                // matchingProduct = ProductModel(id: 101, unitName: "Piece", unitValue: 1.0, imageUrl: "https://example.com/tshirt.jpg", description: "Cotton T-Shirt", category: "Clothing", brand: "Nike", stock: 100, avgRating: 4.5, startDate: nil, endDate: nil, totalSold: 500).
+                                                if let matchingProduct = self.productList.first(where: { $0.id == productId }) {
+                                                    //Tìm sản phẩm trong self.productList có id khớp với productId trong productList
+                                                    mappedDict["unitName"] = matchingProduct.unitName
+                                                    mappedDict["unitValue"] = matchingProduct.unitValue
+                                                    mappedDict["imageUrl"] = matchingProduct.imageUrl
+                                                    mappedDict["description"] = matchingProduct.description
+                                                    mappedDict["category"] = matchingProduct.category
+                                                    mappedDict["brand"] = matchingProduct.brand
+                                                    mappedDict["stock"] = matchingProduct.stock
+                                                    mappedDict["avgRating"] = matchingProduct.avgRating
+                                                    mappedDict["startDate"] = matchingProduct.startDate?.iso8601String()
+                                                    mappedDict["endDate"] = matchingProduct.endDate?.iso8601String()
+                                                    mappedDict["totalSold"] = matchingProduct.totalSold
+                                                    mappedDict["nutritionValues"] = matchingProduct.nutritionValues.map { ["nutritionId": $0.nutritionId, "value": String($0.value)] }
+                                                    // mappedDict["nutritionValues"] = [["nutritionId": 201, "value": "25.0"]]
+                                                }
+                                                /*
+                                                 mappedDict = [
+                                                     "id": 101,
+                                                     "name": "T-Shirt",
+                                                     "price": 19.99,
+                                                     "offerPrice": 15.99,
+                                                     "unitName": "Piece",
+                                                     "unitValue": 1.0,
+                                                     "imageUrl": "https://example.com/tshirt.jpg",
+                                                     "description": "Cotton T-Shirt",
+                                                     "category": "Clothing",
+                                                     "brand": "Nike",
+                                                     "stock": 100,
+                                                     "avgRating": 4.5,
+                                                     "startDate": nil,
+                                                     "endDate": nil,
+                                                     "totalSold": 500
+                                                 ]
+                                                 */
+                                                
+                                                let productModel = ProductModel(dict: mappedDict as NSDictionary)
+                                                products.append(productModel)
+                                            } // if ! unique
+                                        }
+                                    } // for 2
                                 }
-                            }
+                            } // for 1
+                            self.exclusiveOfferList = products
+                        } else {
+                            self.errorMessage = "Failed to fetch exclusive offers"
+                            self.showError = true
                         }
+                    } else {
+                        self.errorMessage = "Invalid response format"
+                        self.showError = true
                     }
-                    DispatchQueue.main.async {
-                        self.exclusiveOfferList = products
-                    }
-                } else {
-                    self.errorMessage = "Failed to fetch exclusive offers"
+                }
+            },
+            failure: { error in
+                Task { @MainActor in
+                    self.errorMessage = error?.localizedDescription ?? "Network error: Failed to fetch exclusive offers"
                     self.showError = true
                 }
-            } else {
-                self.errorMessage = "Invalid response format"
-                self.showError = true
             }
-        } failure: { error in
-            self.errorMessage = error?.localizedDescription ?? "Network error: Failed to fetch exclusive offers"
-            self.showError = true
-        }
+        )
     }
-
+    /*
+     {
+         "status": "success",
+         "content": [
+             {
+                 "id": 123,
+                 "discountPercentage": 20.0,
+                 "startDate": "2025-07-20T00:00:00Z",
+                 "endDate": "2025-07-30T00:00:00Z",
+                 "products": [
+                     {
+                         "productId": 101,
+                         "productName": "T-Shirt",
+                         "originalPrice": 19.99,
+                         "offerPrice": 15.99
+                     },
+                     {
+                         "productId": 102,
+                         "productName": "Jeans",
+                         "originalPrice": 49.99,
+                         "offerPrice": 39.99
+                     }
+                 ]
+             },
+             {
+                 "id": 124,
+                 "discountPercentage": 15.0,
+                 "startDate": "2025-07-21T00:00:00Z",
+                 "endDate": "2025-07-28T00:00:00Z",
+                 "products": [
+                     {
+                         "productId": 103,
+                         "productName": "Sneakers",
+                         "originalPrice": 89.99,
+                         "offerPrice": 76.49
+                     }
+                 ]
+             }
+         ],
+         "message": "Exclusive offers retrieved successfully"
+     }
+     */
+    
     func fetchCategories() {
         resetAlerts()
         ServiceCall.get(path: Globs.SV_CATEGORIES) { responseObj in
@@ -156,7 +479,25 @@ class AdminViewModel: ObservableObject {
             self.showError = true
         }
     }
-
+/*
+ [
+     {
+         "id": 1,
+         "name": "Clothing",
+         "description": "Apparel and fashion items"
+     },
+     {
+         "id": 2,
+         "name": "Footwear",
+         "description": "Shoes and sneakers"
+     },
+     {
+         "id": 3,
+         "name": "Accessories",
+         "description": "Bags, hats, and more"
+     }
+ ]
+ */
     func fetchBrands() {
         resetAlerts()
         ServiceCall.get(path: Globs.SV_BRANDS) { responseObj in
@@ -173,15 +514,66 @@ class AdminViewModel: ObservableObject {
             self.showError = true
         }
     }
+    /*
+     [
+         {
+             "id": 1,
+             "name": "Nike",
+             "description": "Sportswear brand"
+         },
+         {
+             "id": 2,
+             "name": "Adidas",
+             "description": "Athletic apparel"
+         }
+     ]
+     */
 
-    func addProduct(product: ProductRequestModel, completion: @escaping (Bool) -> Void) {
-        if product.name.isEmpty || product.price <= 0 || product.stock <= 0 || product.unitName.isEmpty || product.unitValue.isEmpty || product.categoryId == nil || product.brandId == nil {
-            self.errorMessage = "Please fill in all required fields, including Category and Brand"
-            self.showError = true
-            completion(false)
-            return
+    func fetchNutritions() {
+        resetAlerts()
+        ServiceCall.get(path: Globs.SV_NUTRITIONS) { responseObj in
+            if let response = responseObj as? NSDictionary,
+               let content = response["content"] as? [NSDictionary] {
+                DispatchQueue.main.async {
+                    self.nutritions = content.map { NutritionModel(dict: $0) }
+                    print("Fetched nutritions: \(self.nutritions.map { $0.name })")
+                }
+            } else {
+                DispatchQueue.main.async {
+                    self.errorMessage = "Failed to fetch nutritions: Invalid response format"
+                    self.showError = true
+                    print("Failed to parse nutritions: \(String(describing: responseObj))")
+                }
+            }
+        } failure: { error in
+            DispatchQueue.main.async {
+                self.errorMessage = error?.localizedDescription ?? "Network error"
+                self.showError = true
+                print("Network error: \(String(describing: error))")
+            }
         }
-
+    }
+/*
+ {
+     "status": "success",
+     "content": [
+         {
+             "id": 201,
+             "name": "Protein Shake",
+             "calories": 200,
+             "protein": 25.0
+         },
+         {
+             "id": 202,
+             "name": "Energy Bar",
+             "calories": 150,
+             "protein": 10.0
+         }
+     ],
+     "message": "Nutritions retrieved successfully"
+ }
+ */
+    func addProduct(product: ProductRequestModel, completion: @escaping (Bool) -> Void) {
         resetAlerts()
         let parameters = product.toDict()
         ServiceCall.post(parameter: parameters as NSDictionary, path: Globs.SV_ADD_PRODUCT) { responseObj in
@@ -207,15 +599,30 @@ class AdminViewModel: ObservableObject {
             completion(false)
         }
     }
+    /*
+     {
+         "status": "success",
+         "id": 103,
+         "message": "Product added successfully"
+     }
+     parameters:
+     [
+         "name": "New T-Shirt",
+         "price": 29.99,
+         "unitName": "Piece",
+         "unitValue": 1.0,
+         "imageUrl": "https://example.com/new_tshirt.jpg",
+         "description": "Premium Cotton T-Shirt",
+         "category": "Clothing",
+         "brand": "Nike",
+         "stock": 200,
+         "avgRating": 0.0,
+         "totalSold": 0,
+         "nutritionValues": []
+     ]
+     */
 
     func updateProduct(id: Int, product: ProductRequestModel, completion: @escaping (Bool) -> Void) {
-        if product.name.isEmpty || product.price <= 0 || product.stock <= 0 || product.unitName.isEmpty || product.unitValue.isEmpty || product.categoryId == nil || product.brandId == nil {
-            self.errorMessage = "Please fill in all required fields, including Category and Brand"
-            self.showError = true
-            completion(false)
-            return
-        }
-
         resetAlerts()
         let path = Globs.SV_UPDATE_PRODUCT.replacingOccurrences(of: "{id}", with: String(id))
         let parameters = product.toDict()
@@ -247,7 +654,19 @@ class AdminViewModel: ObservableObject {
             completion(false)
         }
     }
-
+/*
+ let updatedProduct = ProductRequestModel(name: "Updated T-Shirt", price: 34.99, ...)
+ updateProduct(id: 101, product: updatedProduct) { success in
+     print("Update product: \(success ? "Success" : "Failed")")
+ }
+ Response
+ {
+     "status": "success",
+     "id": 101,
+     "name": "Updated T-Shirt",
+     "message": "Product updated successfully"
+ }
+ */
     func deleteProduct(id: Int, completion: @escaping (Bool) -> Void) {
         resetAlerts()
         let path = Globs.SV_DELETE_PRODUCT.replacingOccurrences(of: "{id}", with: String(id))
@@ -273,12 +692,17 @@ class AdminViewModel: ObservableObject {
             completion(false)
         }
     }
+    /*
+     if let response = responseObj as? NSDictionary,
+                let status = response["status"] as? String,
+                status == "success" {
+     */
 
     func searchProducts(name: String?, brandId: Int?, categoryId: Int?) {
         resetAlerts()
         
         var queryItems: [String] = []
-        if let name = name {
+        if let name = name { // name=T-Shirt%20Pro
             queryItems.append("name=\(name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")")
         }
         if let brandId = brandId {
@@ -287,7 +711,7 @@ class AdminViewModel: ObservableObject {
         if let categoryId = categoryId {
             queryItems.append("categoryId=\(categoryId)")
         }
-        let queryString = queryItems.joined(separator: "&")
+        let queryString = queryItems.joined(separator: "&") // name=T-Shirt%20Pro&brandId=1
         let path = queryString.isEmpty ? "\(Globs.SV_FILTER_PRODUCTS)" : "\(Globs.SV_FILTER_PRODUCTS)?\(queryString)"
         
         print("Search URL: \(path)")
@@ -311,7 +735,8 @@ class AdminViewModel: ObservableObject {
         }
     }
 }
-struct ProductRequestModel {
+
+struct ProductRequestModel: Identifiable {
     var id: Int?
     var name: String
     var price: Double
@@ -323,7 +748,7 @@ struct ProductRequestModel {
     var categoryId: Int?
     var brandId: Int?
     var offerPrice: Double?
-    var avgRating: Int?
+    var avgRating: Double?
     var startDate: Date?
     var endDate: Date?
     var nutritionValues: [NutritionValueModel]?
@@ -336,17 +761,16 @@ struct ProductRequestModel {
             "unitName": unitName,
             "unitValue": unitValue
         ]
-        // Don't include ID in the request body - the backend may use the path parameter
-        // if let id = id { dict["id"] = id }
         
-        if let description = description { dict["description"] = description }
+        if let description = description {
+            dict["description"] = description
+        }
         if let imageUrl = imageUrl { dict["imageUrl"] = imageUrl }
         if let categoryId = categoryId { dict["categoryId"] = categoryId }
         if let brandId = brandId { dict["brandId"] = brandId }
-        if let offerPrice = offerPrice { dict["offerPrice"] = offerPrice }
-        if let avgRating = avgRating { dict["avgRating"] = avgRating }
+        if let offerPrice = offerPrice, !offerPrice.isNaN { dict["offerPrice"] = offerPrice }
+        if let avgRating = avgRating, !avgRating.isNaN { dict["avgRating"] = avgRating }
         
-        // Format dates properly
         if let startDate = startDate {
             dict["startDate"] = ISO8601DateFormatter().string(from: startDate)
         }
@@ -354,17 +778,40 @@ struct ProductRequestModel {
             dict["endDate"] = ISO8601DateFormatter().string(from: endDate)
         }
         
-        // Always include nutritionValues as an array, empty if needed
         if let nutritionValues = nutritionValues {
-            dict["nutritionValues"] = nutritionValues.map { ["nutritionId": $0.nutritionId, "value": $0.value] }
+            dict["nutritionValues"] = nutritionValues.map { nutrition in
+                [
+                    "nutritionId": nutrition.nutritionId,
+                    "value": String(nutrition.value)
+                ]
+            }
         } else {
             dict["nutritionValues"] = []
         }
         
         return dict
-    }
+    }// func
 }
-
+/*
+ dict:
+ [
+     "name": "New T-Shirt",
+     "price": 29.99,
+     "stock": 200,
+     "unitName": "Piece",
+     "unitValue": "1.0",
+     "description": "Premium Cotton T-Shirt",
+     "imageUrl": "https://example.com/new_tshirt.jpg",
+     "categoryId": 1,
+     "brandId": 1,
+     "offerPrice": 24.99,
+     "avgRating": 0.0,
+     "startDate": "2025-07-20T17:31:00Z",
+     "nutritionValues": [
+         ["nutritionId": 1, "value": "100.0"]
+     ]
+ ]
+ */
 extension String {
     func iso8601Date() -> Date? {
         ISO8601DateFormatter().date(from: self)

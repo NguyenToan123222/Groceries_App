@@ -16,6 +16,7 @@ struct SectionTitleAll: View {
         case bestSelling
         case exclusiveOffers
         case allProducts
+        case custom
     }
     
     @State private var isActive = false
@@ -53,6 +54,9 @@ struct SectionTitleAll: View {
             ExclusiveOffersListView()
         case .allProducts:
             ProductListView()
+        case .custom:
+            CategoriesView() // Không cần điều hướng ở đây vì đã xử lý bên ngoài
+                
         }
     }
 }

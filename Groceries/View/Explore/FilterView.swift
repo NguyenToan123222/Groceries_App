@@ -6,8 +6,11 @@
 import SwiftUI
 
 struct FilterView: View {
+    
     @Binding var isPresented: Bool
     @ObservedObject var viewModel: ExploreViewModel
+    
+    @State private var selectedCategoryId: Int? = nil // Chỉ lưu một danh mục duy nhất
     
     var body: some View {
         NavigationView {
@@ -25,7 +28,7 @@ struct FilterView: View {
                             .foregroundColor(.black)
                             .padding(10)
                     }
-                }
+                } // H
                 .padding(.horizontal)
                 
                 ScrollView {
@@ -37,8 +40,9 @@ struct FilterView: View {
                         
                         ForEach(viewModel.listArr, id: \.id) { category in
                             HStack {
-                                Image(systemName: viewModel.selectedCategories.contains(category.id) ? "checkmark.square.fill" : "square")
-                                    .foregroundColor(viewModel.selectedCategories.contains(category.id) ? .green : .gray)
+                                Image(systemName: selectedCategoryId == category.id ? "checkmark.square.fill" : "square")
+                                // Nếu selectedCategoryId = 1 và category.id = 1 → Hiển thị [✓].
+                                    .foregroundColor(selectedCategoryId == category.id ? .green : .gray)
                                 Text(category.name)
                                     .font(.customfont(.medium, fontSize: 14))
                                     .foregroundColor(.black)
@@ -46,13 +50,13 @@ struct FilterView: View {
                             }
                             .padding(.horizontal)
                             .onTapGesture {
-                                if viewModel.selectedCategories.contains(category.id) {
-                                    viewModel.selectedCategories.removeAll { $0 == category.id }
+                                if selectedCategoryId == category.id {
+                                    selectedCategoryId = nil // Bỏ chọn nếu đã chọn
                                 } else {
-                                    viewModel.selectedCategories.append(category.id)
+                                    selectedCategoryId = category.id // Chọn danh mục mới
                                 }
                             }
-                        }
+                        } // For
                         
                         // Phần thương hiệu
                         Text("Brand")
@@ -80,15 +84,15 @@ struct FilterView: View {
                         }
                     }
                     .padding(.vertical)
-                }
+                } // Scroll
                 
                 // Nút xóa bộ lọc
                 Button(action: {
-                    viewModel.selectedCategories = []
+                    selectedCategoryId = nil
                     viewModel.selectedBrands = []
                     viewModel.searchProducts(
                         name: viewModel.txtSearch,
-                        categoryIds: nil,
+                        categoryId: nil,
                         brands: nil
                     )
                 }) {
@@ -104,9 +108,10 @@ struct FilterView: View {
                 
                 // Nút áp dụng bộ lọc
                 Button(action: {
+                    viewModel.selectedCategories = selectedCategoryId != nil ? [selectedCategoryId!] : []
                     viewModel.searchProducts(
                         name: viewModel.txtSearch,
-                        categoryIds: viewModel.selectedCategories.isEmpty ? nil : viewModel.selectedCategories,
+                        categoryId: selectedCategoryId,
                         brands: viewModel.selectedBrands.isEmpty ? nil : viewModel.selectedBrands
                     )
                     isPresented = false
@@ -121,7 +126,7 @@ struct FilterView: View {
                 }
                 .padding(.horizontal)
                 .padding(.bottom, .bottomInsets + 20)
-            }
+            } // V
             .background(Color.white)
         }
     }
@@ -132,3 +137,35 @@ struct FilterView_Previews: PreviewProvider {
         FilterView(isPresented: .constant(true), viewModel: ExploreViewModel.shared)
     }
 }
+
+/*
+ {
+   "data": {
+     "categories": [
+       { "cat_id": 1, "cat_name": "Fresh Fruits & Vegetable", "image": "...", "color": "53B175" },
+       { "cat_id": 2, "cat_name": "Beverages", "image": "...", "color": "FF5733" },
+       { "cat_id": 3, "cat_name": "Dairy Products", "image": "...", "color": "FFC107" },
+       { "cat_id": 4, "cat_name": "Bakery", "image": "...", "color": "4CAF50" },
+       { "cat_id": 5, "cat_name": "Snacks", "image": "...", "color": "9C27B0" }
+     ],
+     "count": 5
+   }
+ }
+ 
+ {
+   "data": {
+     "brands": ["BrandA", "BrandB", "BrandC", "BrandD", "BrandE"],
+     "count": 5
+   }
+ }
+ 
+ {
+   "data": {
+     "products": [
+       { "id": 5, "name": "Apple", "price": 2.50, "image": "...", "brand": "BrandA", ... },
+       { "id": 2, "name": "Banana", "price": 1.50, "image": "...", "brand": "BrandB", ... }
+     ],
+     "count": 2
+   }
+ }
+ */

@@ -7,17 +7,18 @@
 import SwiftUI
 
 struct OrderAcceptView: View {
-    
     @Environment(\.presentationMode) var mode: Binding<PresentationMode>
-    
+    let orderId: Int?
+    @State private var isTrackingOrder = false
+
     var body: some View {
-        ZStack{
+        ZStack {
             Image("bottom_bg")
-            .resizable()
-            .scaledToFill()
-            .frame(width: .screenWidth, height: .screenHeight)
+                .resizable()
+                .scaledToFill()
+                .frame(width: .screenWidth, height: .screenHeight)
             
-            VStack{
+            VStack {
                 Spacer()
                 Image("order_accpeted")
                     .resizable()
@@ -31,7 +32,7 @@ struct OrderAcceptView: View {
                     .foregroundColor(.primaryText)
                     .padding(.bottom, 12)
                 
-                Text("Your items has been placcd and is on\nit’s way to being processed")
+                Text("Your items has been placed and is on\nit’s way to being processed")
                     .multilineTextAlignment(.center)
                     .font(.customfont(.semibold, fontSize: 16))
                     .foregroundColor(.secondaryText)
@@ -41,23 +42,29 @@ struct OrderAcceptView: View {
                 Spacer()
                 
                 RoundButton(tittle: "Track Order") {
-                    
+                    if orderId != nil {
+                        isTrackingOrder = true
+                        MyOrdersViewModel.shared.refreshOrders() // Làm mới danh sách đơn hàng
+                    }
                 }
                 
                 Button {
                     mode.wrappedValue.dismiss()
+                    NotificationCenter.default.post(name: NSNotification.Name("NavigateToHome"), object: nil)
                 } label: {
-                    Text("Back to home")
+                    Text("Back to Home")
                         .font(.customfont(.semibold, fontSize: 18))
                         .foregroundColor(.primaryApp)
                         .padding(.vertical, 15)
                 }
-                .padding(.bottom , .bottomInsets + 15)
-
-            }
+                .padding(.bottom, .bottomInsets + 15)
+            } // VStack
             .padding(.horizontal, 20)
-            
-        }
+
+            NavigationLink(destination: MyOrdersView(), isActive: $isTrackingOrder) {
+                EmptyView()
+            }
+        } // ZStack
         .navigationTitle("")
         .navigationBarBackButtonHidden(true)
         .navigationBarHidden(true)
@@ -65,8 +72,10 @@ struct OrderAcceptView: View {
     }
 }
 
-struct OrderAccpetView_Previews: PreviewProvider {
+struct OrderAcceptView_Previews: PreviewProvider {
     static var previews: some View {
-        OrderAcceptView()
+        NavigationView {
+            OrderAcceptView(orderId: 1)
+        }
     }
 }

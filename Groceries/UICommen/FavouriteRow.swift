@@ -14,37 +14,49 @@ struct FavouriteRow: View {
     @StateObject var favoriteVM = FavouriteViewModel.shared
     var onDelete: (Int) -> Void
     var onAddToCart: (Int) -> Void
-    @State private var isImageLoaded = false
-    @State private var hasImageFailed = false
-
+/* - Vì FavouriteRow chỉ chịu trách nhiệm hiển thị giao diện và gửi yêu cầu (gọi onDelete hoặc onAddToCart khi nhấn nút). Logic xử lý thực tế (xóa khỏi danh sách yêu thích, thêm vào giỏ hàng) được thực hiện trong FavouriteView hoặc ViewModel (favVM, CartViewModel.shared), thường qua API.
+  - Thay vì trả về giá trị ngay (như true nếu xóa thành công), closure sử dụng callback (hàm gọi lại) để thông báo kết quả sau khi API hoàn tất. Điều này giúp tách biệt trách nhiệm: FavouriteRow gửi yêu cầu, FavouriteView xử lý và phản hồi qua alert.*/
     var body: some View {
         VStack {
             HStack(spacing: 15) {
-                
-                    // Main product image
+                // Hình ảnh sản phẩm
                 WebImage(url: URL(string: fObj.imageUrl ?? "https://img.freepik.com/free-vector/illustration-gallery-icon_53876-27002.jpg"))
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 60, height: 60)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 60, height: 60)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
                 
+                // Tên và đơn vị sản phẩm
                 VStack(spacing: 4) {
                     Text(fObj.name)
                         .font(.customfont(.bold, fontSize: 16))
                         .foregroundColor(.primaryText)
                         .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                     
-                    Text("\(fObj.unitValue.isEmpty ? "" : fObj.unitValue + " ")\(fObj.unitName.isEmpty ? "" : fObj.unitName)\(fObj.unitValue.isEmpty && fObj.unitName.isEmpty ? "" : ", price")")
+                    Text(unitDisplayText)
                         .font(.customfont(.medium, fontSize: 14))
                         .foregroundColor(.secondaryText)
                         .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                 }
                 
-                Text("$\(fObj.offerPrice ?? fObj.price, specifier: "%.2f")")
-                    .font(.customfont(.semibold, fontSize: 18))
-                    .foregroundColor(.primaryText)
+                // Hiển thị giá
+                if fObj.isDiscountValid, let offerPrice = fObj.offerPrice, offerPrice < fObj.price {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(String(format: "$%.2f", offerPrice))
+                            .font(.customfont(.semibold, fontSize: 18))
+                            .foregroundColor(.red)
+                        Text(String(format: "$%.2f", fObj.price))
+                            .font(.customfont(.regular, fontSize: 12))
+                            .foregroundColor(.gray)
+                            .strikethrough()
+                    }
+                } else {
+                    Text(String(format: "$%.2f", fObj.price))
+                        .font(.customfont(.semibold, fontSize: 18))
+                        .foregroundColor(.primaryText)
+                }
                 
+                // Nút thêm vào giỏ hàng
                 Button(action: {
                     onAddToCart(fObj.id)
                 }) {
@@ -58,6 +70,7 @@ struct FavouriteRow: View {
                         .clipShape(Circle())
                 }
                 
+                // Nút xóa
                 Button(action: {
                     onDelete(fObj.id)
                 }) {
@@ -71,6 +84,7 @@ struct FavouriteRow: View {
                         .clipShape(Circle())
                 }
                 
+                // Điều hướng đến chi tiết sản phẩm
                 NavigationLink(destination: ProductDetailView(productId: fObj.id)) {
                     Image("next_1")
                         .resizable()
@@ -83,10 +97,12 @@ struct FavouriteRow: View {
             
             Divider()
         }
-        .onAppear {
-            isImageLoaded = false
-            hasImageFailed = false
-        }
+    }
+    
+    // Hiển thị đơn vị
+    private var unitDisplayText: String {
+        let components = [fObj.unitValue, fObj.unitName].filter { !$0.isEmpty }
+        return components.isEmpty ? "" : components.joined(separator: " ") + ", price"
     }
 }
 
@@ -97,16 +113,17 @@ struct FavouriteRow_Previews: PreviewProvider {
                 fObj: ProductModel(dict: [
                     "id": 1,
                     "name": "Organic Apple",
-                    "detail": "Fresh organic apples, rich in vitamins.",
-                    "unitName": "kg",
-                    "unitValue": "4",
-                    "nutrition_weight": "250g",
                     "price": 3.99,
-                    "offerPrice": 2.9,
+                    "stock": 100,
+                    "unitName": "kg",
+                    "unitValue": "1",
                     "imageUrl": "https://t4.ftcdn.net/jpg/04/96/45/49/360_F_496454926_VsM8D2yyMDFzAm8kGCNFd7vkKpt7drrK.jpg",
-                    "category": "Fresh Fruits",
-                    "brand": "Fruit",
-                    "is_fav": 1
+                    "category": ["name": "Fresh Fruits"],
+                    "brand": ["name": "Fruit"],
+                    "avgRating": 4.5,
+                    "exclusiveOfferProducts": [
+                        ["offerPrice": 2.99, "discountPercentage": 25.0]
+                    ]
                 ]),
                 onDelete: { productId in
                     print("Deleted product with ID: \(productId)")

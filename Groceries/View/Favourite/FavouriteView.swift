@@ -9,6 +9,7 @@ import SwiftUI
 import SDWebImageSwiftUI
 
 struct FavouriteView: View {
+    
     @StateObject var favVM = FavouriteViewModel.shared
     
     @State private var animateBackground = false
@@ -43,7 +44,7 @@ struct FavouriteView: View {
                 )
             }
         }
-    }
+    }// body
     
     private var backgroundView: some View {
         LinearGradient(
@@ -55,7 +56,6 @@ struct FavouriteView: View {
         .hueRotation(.degrees(animateBackground ? 360 : 0))
         .animation(.linear(duration: 5).repeatForever(autoreverses: true), value: animateBackground)
         .onAppear {
-            animateBackground = true
         }
     }
     
@@ -84,10 +84,10 @@ struct FavouriteView: View {
                         .foregroundColor(.gray)
                         .padding(.top, 50)
                 } else {
-                    ForEach(favVM.listArr) { fObj in
+                    ForEach(favVM.listArr) { fObj in // favVM.listArr = [ProductModel(id: 5, name: "Apple", ...), ProductModel(id: 7, name: "Orange", ...)].
                         FavouriteRow(
                             fObj: fObj,
-                            onDelete: { productId in
+                            onDelete: { productId in // fObj.id
                                 favVM.removeFavorite(productId: productId) { success, message in
                                     if success {
                                         alertMessage = "Removed '\(fObj.name)' from favorites."
@@ -109,7 +109,7 @@ struct FavouriteView: View {
                                     }
                                 }
                             }
-                        )
+                        ) // F R
                         .offset(x: animateItems ? 0 : -50)
                         .opacity(animateItems ? 1 : 0)
                         .animation(
@@ -117,13 +117,13 @@ struct FavouriteView: View {
                             .delay(Double(favVM.listArr.firstIndex(of: fObj) ?? 0) * 0.1),
                             value: animateItems
                         )
-                    }
-                }
-            }
+                    } // For
+                } // else
+            } // Lazy
             .padding(20)
             .padding(.top, 46)
             .padding(.bottom, .bottomInsets + 60)
-        }
+        } // SCroll
     }
     
     private var addToCartButtonView: some View {
@@ -140,11 +140,11 @@ struct FavouriteView: View {
         }
         .padding(.horizontal, 20)
         .padding(.bottom, .bottomInsets + 80)
-        .scaleEffect(animateButton ? 1.0 : 0.8)
+        .scaleEffect(animateButton ? 1.0 : 0)
         .opacity(animateButton ? 1.0 : 0.0)
         .animation(.spring(response: 0.5, dampingFraction: 0.6), value: animateButton)
     }
-}
+} // struct
 
 struct FavouriteView_Previews: PreviewProvider {
     static var previews: some View {

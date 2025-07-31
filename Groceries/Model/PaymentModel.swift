@@ -8,22 +8,29 @@
 import SwiftUI
 
 struct PaymentModel: Identifiable, Equatable {
-    
-    var id: Int = 0
-    var name: String = ""
-    var cardNumber: String = ""
-    var cardMonth: String = ""
-    var cardYear: String = ""
-    
-    
-    init(dict: NSDictionary) {
-        self.id = dict.value(forKey: "pay_id") as? Int ?? 0
-        self.name = dict.value(forKey: "name") as? String ?? ""
-        self.cardNumber = dict.value(forKey: "card_number") as? String ?? ""
-        self.cardMonth = dict.value(forKey: "card_month") as? String ?? ""
-        self.cardYear = dict.value(forKey: "card_year") as? String ?? ""
+    var id: String // transactionId từ BE
+    var orderId: Int
+    var paymentMethod: String // "PAYPAL", "MOMO", "COD"
+    var status: String // "PENDING", "COMPLETED", "FAILED"
+    var paymentUrl: String? // URL để chuyển hướng thanh toán (PayPal/MoMo)
+
+    init(id: String = "", orderId: Int = 0, paymentMethod: String = "", status: String = "PENDING", paymentUrl: String? = nil) {
+        self.id = id
+        self.orderId = orderId
+        self.paymentMethod = paymentMethod
+        self.status = status
+        self.paymentUrl = paymentUrl
     }
-    
+
+    // Parse từ response của API createPayment
+    init(dict: NSDictionary, orderId: Int, paymentMethod: String) {
+        self.id = UUID().uuidString // Tạm thời tạo ID phía FE
+        self.orderId = orderId
+        self.paymentMethod = paymentMethod
+        self.status = "PENDING"
+        self.paymentUrl = dict.value(forKey: "paymentUrl") as? String ?? ""
+    }
+
     static func == (lhs: PaymentModel, rhs: PaymentModel) -> Bool {
         return lhs.id == rhs.id
     }

@@ -11,23 +11,24 @@ import SwiftUI
 struct GroceriesApp: App {
     @StateObject var mainVM = MainViewModel.shared
     @State private var hasLaunchedBefore: Bool = UserDefaults.standard.bool(forKey: "hasLaunchedBefore")
+    @State private var navigationPath = NavigationPath()
 
     var body: some Scene {
         WindowGroup {
-            NavigationView {
-                if !hasLaunchedBefore { // là false (tức là ứng dụng chạy lần đầu tiên)
+            NavigationStack(path: $navigationPath) {
+                if !hasLaunchedBefore {
                     WelcomeView()
-                        .environmentObject(mainVM) // Truyền MainViewModel vào môi trường
+                        .environmentObject(mainVM)
                         .onAppear {
                             UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
-                            hasLaunchedBefore = true //đảm bảo rằng lần chạy tiếp theo của ứng dụng= true
+                            hasLaunchedBefore = true
                         }
-                } else { // là true (ứng dụng đã chạy trước đó)
-                    if mainVM.isUserLogin { // người dùng đã đăng nhập hay chưa.
-                        if mainVM.isAdmin() { // admin
+                } else {
+                    if mainVM.isUserLogin {
+                        if mainVM.isAdmin() {
                             AdminView()
                                 .environmentObject(mainVM)
-                        } else { //  customer
+                        } else {
                             MainTabView()
                                 .environmentObject(mainVM)
                         }
@@ -38,10 +39,14 @@ struct GroceriesApp: App {
                 }
             }
             .onAppear {
-                // Đóng bàn phím toàn cục khi ứng dụng khởi động
                 UIApplication.shared.dismissKeyboardGlobally()
             }
-            
+            .onChange(of: mainVM.navigateToLogin) { newValue in
+                if newValue {
+                    navigationPath = NavigationPath() // Làm sạch stack
+                    mainVM.navigateToLogin = false // Reset trạng thái sau khi điều hướng
+                }
+            }
         }
     }
 }

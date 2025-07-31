@@ -30,6 +30,7 @@ struct PromoCodeModel: Identifiable, Equatable {
         self.description = dict.value(forKey: "description") as? String ?? ""
         self.startDate = (dict.value(forKey: "start_date") as? String ?? "").stringDateToDate() ?? Date()
         self.endDate = (dict.value(forKey: "end_date") as? String ?? "").stringDateToDate() ?? Date()
+        // ?? Date(): Mặc định là thời gian hiện tại (01:28 AM, May 29, 2025) nếu chuyển đổi thất bại.
         self.type = dict.value(forKey: "type") as? Int ?? 0
         self.minOrderAmount = dict.value(forKey: "min_order_amount") as? Double ?? 0
         self.maxDiscountAmount = dict.value(forKey: "max_discount_amount") as? Double ?? 0

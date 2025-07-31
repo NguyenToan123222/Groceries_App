@@ -55,7 +55,7 @@ struct AboutView: View {
                 .font(.footnote)
                 .foregroundColor(.gray)
                 .padding(.bottom, 20)
-        }
+        } // V
         .navigationTitle("About")
         .background(Color(UIColor.systemGray6).edgesIgnoringSafeArea(.all))
     }

@@ -26,18 +26,21 @@ struct HelpView: View {
                         .font(.body)
                         .foregroundColor(.gray)
                 }
+                .foregroundColor(.black)
                 
                 DisclosureGroup("What if my delivery is late?") {
                     Text("If your delivery is delayed, please contact our support team via the button below.")
                         .font(.body)
                         .foregroundColor(.gray)
                 }
+                .foregroundColor(.black)
                 
                 DisclosureGroup("How do I cancel an order?") {
                     Text("To cancel an order, go to 'Orders', select the order, and choose 'Cancel' if the option is available.")
                         .font(.body)
                         .foregroundColor(.gray)
                 }
+                .foregroundColor(.black)
             }
             .padding(.horizontal)
             

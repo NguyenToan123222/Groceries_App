@@ -9,6 +9,7 @@
 import SwiftUI
 
 struct PromoCodeView: View {
+    
     @Environment(\.presentationMode) var mode: Binding<PresentationMode>
     
     @StateObject var promoVM = PromoCodeViewModel.shared
@@ -126,8 +127,39 @@ struct PromoCodeView: View {
     }
 }
 
+
 struct PromoCodeView_Previews: PreviewProvider {
     static var previews: some View {
         PromoCodeView()
+            .environmentObject({
+                let vm = PromoCodeViewModel()
+                vm.listArr = [
+                    PromoCodeModel(dict: [
+                        "promo_code_id": 1,
+                        "title": "Summer Sale",
+                        "code": "SUMMER25",
+                        "description": "Get 25% off on orders over $50.",
+                        "start_date": "2025-07-01 00:00:00",
+                        "end_date": "2025-07-31 23:59:59",
+                        "type": 1,
+                        "min_order_amount": 50.0,
+                        "max_discount_amount": 20.0,
+                        "offer_price": 0.0
+                    ]),
+                    PromoCodeModel(dict: [
+                        "promo_code_id": 2,
+                        "title": "Free Shipping",
+                        "code": "FREESHIP",
+                        "description": "Free shipping on all orders over $30.",
+                        "start_date": "2025-07-05 00:00:00",
+                        "end_date": "2025-08-05 23:59:59",
+                        "type": 2,
+                        "min_order_amount": 30.0,
+                        "max_discount_amount": 0.0,
+                        "offer_price": 0.0
+                    ])
+                ]
+                return vm
+            }())
     }
 }

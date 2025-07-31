@@ -1,8 +1,10 @@
 import SwiftUI
 
 struct ForgetPassView: View {
+    
     @Environment(\.presentationMode) var mode: Binding<PresentationMode>
     @StateObject var mainVM = MainViewModel.shared
+    
     @State private var step: Int = 1
     @State private var animateBackground = false
     @State private var animateLogo = false

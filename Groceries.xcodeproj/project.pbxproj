@@ -10,7 +10,7 @@
 		DE12105E2D83493C00EEDFFE /* Launch Screen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = DE12105D2D83493C00EEDFFE /* Launch Screen.storyboard */; };
 		DE1210BC2D834A4800EEDFFE /* SDWebImageSwiftUI in Frameworks */ = {isa = PBXBuildFile; productRef = DE1210BB2D834A4800EEDFFE /* SDWebImageSwiftUI */; };
 		DE1210BF2D834A6900EEDFFE /* CountryPicker in Frameworks */ = {isa = PBXBuildFile; productRef = DE1210BE2D834A6900EEDFFE /* CountryPicker */; };
-		DE552A002DA6C0F00088948D /* JWTDecode in Frameworks */ = {isa = PBXBuildFile; productRef = DE5529FF2DA6C0F00088948D /* JWTDecode */; };
+		DE7920082DE9621F00B20E5E /* JWTDecode in Frameworks */ = {isa = PBXBuildFile; productRef = DE7920072DE9621F00B20E5E /* JWTDecode */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -46,7 +46,7 @@
 			files = (
 				DE1210BC2D834A4800EEDFFE /* SDWebImageSwiftUI in Frameworks */,
 				DE1210BF2D834A6900EEDFFE /* CountryPicker in Frameworks */,
-				DE552A002DA6C0F00088948D /* JWTDecode in Frameworks */,
+				DE7920082DE9621F00B20E5E /* JWTDecode in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -84,7 +84,7 @@
 			packageProductDependencies = (
 				DE1210BB2D834A4800EEDFFE /* SDWebImageSwiftUI */,
 				DE1210BE2D834A6900EEDFFE /* CountryPicker */,
-				DE5529FF2DA6C0F00088948D /* JWTDecode */,
+				DE7920072DE9621F00B20E5E /* JWTDecode */,
 			);
 			productName = Groceries;
 			productReference = DEC83C892D83BC1600D17FE7 /* Groceries.app */;
@@ -117,7 +117,7 @@
 			packageReferences = (
 				DE1210BA2D834A4800EEDFFE /* XCRemoteSwiftPackageReference "SDWebImageSwiftUI" */,
 				DE1210BD2D834A6900EEDFFE /* XCRemoteSwiftPackageReference "CountryPicker" */,
-				DE5529FE2DA6C0F00088948D /* XCRemoteSwiftPackageReference "JWTDecode" */,
+				DE7920062DE9621F00B20E5E /* XCRemoteSwiftPackageReference "JWTDecode" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = DE61C0732D83488800F9181D;
@@ -384,7 +384,7 @@
 				minimumVersion = 2.0.3;
 			};
 		};
-		DE5529FE2DA6C0F00088948D /* XCRemoteSwiftPackageReference "JWTDecode" */ = {
+		DE7920062DE9621F00B20E5E /* XCRemoteSwiftPackageReference "JWTDecode" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/auth0/JWTDecode.swift";
 			requirement = {
@@ -405,9 +405,9 @@
 			package = DE1210BD2D834A6900EEDFFE /* XCRemoteSwiftPackageReference "CountryPicker" */;
 			productName = CountryPicker;
 		};
-		DE5529FF2DA6C0F00088948D /* JWTDecode */ = {
+		DE7920072DE9621F00B20E5E /* JWTDecode */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = DE5529FE2DA6C0F00088948D /* XCRemoteSwiftPackageReference "JWTDecode" */;
+			package = DE7920062DE9621F00B20E5E /* XCRemoteSwiftPackageReference "JWTDecode" */;
 			productName = JWTDecode;
 		};
 /* End XCSwiftPackageProductDependency section */
