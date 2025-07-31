@@ -13,23 +13,23 @@ struct LineTextField: View {
     @State var placeholder: String = "Placeholder"
     @State var keyboardType: UIKeyboardType = .default
     
-    
     var body: some View {
         VStack {
             Text(title)
                 .font(.customfont(.semibold, fontSize: 16))
-                .foregroundColor(.textTitle)
+                .foregroundColor(.black)
                 .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             
-          
-                TextField(placeholder, text: $txt)
-                    .keyboardType(keyboardType)
-                    .autocapitalization(.none)
-                    .disableAutocorrection(true)
-                    .frame(height: 40)
+            TextField(placeholder, text: $txt)
+                .keyboardType(keyboardType)
+                .textContentType(.none) // Tắt gợi ý và tìm kiếm emoji
+                .autocapitalization(.none) // Tắt tự động viết hoa đầu câu
+                .disableAutocorrection(true) // Tắt tự động sửa lỗi
+                .textInputAutocapitalization(.never) // Tắt tự động viết hoa
+                .autocorrectionDisabled(true) // Tắt tự động sửa lỗi (iOS 15+)
+                .frame(height: 40)
             
             Divider()
-
         }
     }
 }
@@ -43,47 +43,47 @@ struct LineTextField_Previews: PreviewProvider {
 
 
 struct LineSecureField: View {
-    
     @State var title: String = "Title"
     @State var placeholder: String = "Placeholder"
     
     @Binding var txt: String
     @Binding var isShowPassword: Bool
- 
-    
     
     var body: some View {
         VStack {
             Text(title)
                 .font(.customfont(.semibold, fontSize: 16))
-                .foregroundColor(.textTitle)
+                .foregroundColor(.black)
                 .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
             
-            if (isShowPassword) {
+            if isShowPassword {
                 TextField(placeholder, text: $txt)
-                    .disableAutocorrection(true)
-                    .autocapitalization(.none)
+                    .textContentType(.none) // Tắt gợi ý và tìm kiếm emoji
+                    .autocapitalization(.none) // Tắt tự động viết hoa đầu câu
+                    .disableAutocorrection(true) // Tắt tự động sửa lỗi
+                    .textInputAutocapitalization(.never) // Tắt tự động viết hoa
+                    .autocorrectionDisabled(true) // Tắt tự động sửa lỗi (iOS 15+)
                     .modifier(ShowButton(isShow: $isShowPassword))
                     .frame(height: 40)
-
-            }
-            else {
+            } else {
                 SecureField(placeholder, text: $txt)
+                    .textContentType(.none) // Tắt gợi ý và tìm kiếm emoji
+                    .autocapitalization(.none) // Tắt tự động viết hoa đầu câu
+                    .disableAutocorrection(true) // Tắt tự động sửa lỗi
+                    .textInputAutocapitalization(.never) // Tắt tự động viết hoa
+                    .autocorrectionDisabled(true) // Tắt tự động sửa lỗi (iOS 15+)
                     .modifier(ShowButton(isShow: $isShowPassword))
-                    .autocapitalization(.none)
                     .frame(height: 40)
             }
+            
             Divider()
-
         }
     }
 }
-
-
 struct LineSecureField_Previews: PreviewProvider {
     static var previews: some View {
         @State var txt: String = ""
-        @State var isShowPassword: Bool = false
+        @State var isShowPassword: Bool = true
         
         LineSecureField(txt: $txt, isShowPassword: $isShowPassword)
             .padding()

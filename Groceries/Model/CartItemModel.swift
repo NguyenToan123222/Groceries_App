@@ -3,66 +3,46 @@
 //  Groceries
 //
 //  Created by Nguyễn Toàn on 16/3/25.
-//
+
 
 import SwiftUI
 
-struct CartItemModel:  Identifiable, Equatable {
-    var id: UUID = UUID()
-    var cartId: Int = 0
-    var userId: Int = 0
-    var qty: Int = 0
-    var prodId: Int = 0
-    var catId: Int = 0
-    var brandId: Int = 0
-    var typeId: Int = 0
-    var brandName: String = ""
-    var detail: String = ""
-    var name: String = ""
-    var unitName: String = ""
-    var unitValue: String = ""
-    var nutritionWeight: String = ""
-    var image: String = ""
-    var catName: String = ""
-    var typeName: String = ""
-    var offerPrice: Double?
-    var price: Double = 0
-    var startDate: Date = Date()
-    var endDate: Date = Date()
-    var itemPrice: Double?
-    var totalPrice: Double?
-    var isFav: Bool = false
-    
+struct CartItemModel: Identifiable, Equatable {
+    var id: Int?
+    var productId: Int?
+    var productName: String
+    var quantity: Int
+    var imageUrl: String
+    var price: Double
+    var totalPrice: Double
+    var discountPercentage: Double?
+    var originalPrice: Double?
+    var startDate: Date?
+    var endDate: Date?
+    var isDiscountValid: Bool
 
     init(dict: NSDictionary) {
-        
-       
-        self.cartId = dict.value(forKey: "cart_id") as? Int ?? 0
-        self.userId = dict.value(forKey: "user_id") as? Int ?? 0
-        self.qty = dict.value(forKey: "qty") as? Int ?? 0
-        self.prodId = dict.value(forKey: "prod_id") as? Int ?? 0
-        self.catId = dict.value(forKey: "cat_id") as? Int ?? 0
-        self.brandId = dict.value(forKey: "brand_id") as? Int ?? 0
-        self.typeId = dict.value(forKey: "type_id") as? Int ?? 0
-        self.isFav = dict.value(forKey: "is_fav") as? Int ?? 0 == 1
-        
-        self.detail = dict.value(forKey: "detail") as? String ?? ""
-        self.name = dict.value(forKey: "name") as? String ?? ""
-        self.unitName = dict.value(forKey: "unit_name") as? String ?? ""
-        self.unitValue = dict.value(forKey: "unit_value") as? String ?? ""
-        self.nutritionWeight = dict.value(forKey: "nutrition_weight") as? String ?? ""
-        self.image = dict.value(forKey: "image") as? String ?? ""
-        self.catName = dict.value(forKey: "cat_name") as? String ?? ""
-        self.brandName = dict.value(forKey: "brand_name") as? String ?? ""
-        self.typeName = dict.value(forKey: "type_name") as? String ?? ""
-        self.offerPrice = dict.value(forKey: "offer_price") as? Double
-        self.itemPrice = dict.value(forKey: "item_price") as? Double
-        self.totalPrice = dict.value(forKey: "total_price") as? Double
-        self.price = dict.value(forKey: "price") as? Double ?? 0
-        self.startDate = (dict.value(forKey: "start_date") as? String ?? "").stringDateToDate() ?? Date()
-        self.endDate = (dict.value(forKey: "end_date") as? String ?? "").stringDateToDate() ?? Date()
+        self.id = dict.value(forKey: "id") as? Int
+        self.productId = dict.value(forKey: "productId") as? Int
+        self.productName = dict.value(forKey: "productName") as? String ?? ""
+        self.quantity = dict.value(forKey: "quantity") as? Int ?? 0
+        self.imageUrl = dict.value(forKey: "imageUrl") as? String ?? ""
+        self.price = dict.value(forKey: "price") as? Double ?? 0.0
+        self.totalPrice = dict.value(forKey: "totalPrice") as? Double ?? 0.0
+        self.discountPercentage = dict.value(forKey: "discountPercentage") as? Double
+        self.originalPrice = dict.value(forKey: "originalPrice") as? Double
+        self.startDate = (dict.value(forKey: "startDate") as? String)?.iso8601Date()
+        self.endDate = (dict.value(forKey: "endDate") as? String)?.iso8601Date()
+
+        let currentDate = Date()
+        if startDate != nil && endDate != nil {
+            self.isDiscountValid = (self.discountPercentage != nil && self.price < (self.originalPrice ?? self.price)) && (startDate! <= currentDate && currentDate <= endDate!)
+        } else {
+            self.isDiscountValid = (self.discountPercentage != nil && self.price < (self.originalPrice ?? self.price))
+        }
+        //Khối if kiểm tra cả giá và thời gian, trong khi khối else chỉ kiểm tra giá nếu thiếu thời gian.
     }
-    
+
     static func == (lhs: CartItemModel, rhs: CartItemModel) -> Bool {
         return lhs.id == rhs.id
     }

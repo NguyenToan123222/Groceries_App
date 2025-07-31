@@ -7,16 +7,15 @@
 
 import SwiftUI
 
-struct NutritionModel : Identifiable, Equatable {
-    
-    var id: Int = 0
-    var nutritionName: String = ""
-    var nutritionValue: String = ""
-    
+struct NutritionModel: Identifiable {
+    let id: Int
+    let name: String
+    let unit: String // Thêm thuộc tính unit
+
     init(dict: NSDictionary) {
-        self.id = dict.value(forKey: "nutrition_id") as? Int ?? 0
-        self.nutritionName = dict.value(forKey: "nutrition_name") as? String ?? ""
-        self.nutritionValue = dict.value(forKey: "nutrition_value") as? String ?? ""
+        self.id = dict["id"] as? Int ?? 0
+        self.name = dict["name"] as? String ?? ""
+        self.unit = dict["unit"] as? String ?? "g" // Mặc định là "g" nếu không có
     }
     static func == (lhs: NutritionModel, rsh: NutritionModel) -> Bool {
         return lhs.id == rsh.id

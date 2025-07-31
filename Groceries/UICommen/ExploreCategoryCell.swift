@@ -9,45 +9,53 @@ import SwiftUI
 import SDWebImageSwiftUI
 
 struct ExploreCategoryCell: View {
-    @State var cObj: ExploreCategoryModel = ExploreCategoryModel(dict: [ : ])
-   
-   
+    @State var cObj: ExploreCategoryModel
     
     var body: some View {
-        VStack{
+        VStack {
+            // Sử dụng hình ảnh từ Assets nếu có, nếu không thì dùng URL
+            if let assetImageName = cObj.assetImageName {
+                Image(assetImageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 130, height: 100)
+                    .clipped()
+            } else {
+                WebImage(url: URL(string: cObj.image))
+                    .resizable()
+                    .indicator(.activity)
+                    .transition(.fade(duration: 0.5))
+                    .scaledToFit()
+                    .frame(width: 100, height: 70)
+            }
             
-            WebImage(url: URL(string: cObj.image ))
-                .resizable()
-                .indicator(.activity) // Activity Indicator
-                .transition(.fade(duration: 0.5))
-                .scaledToFit()
-                .frame(width: 120, height: 90)
-            
-        
             Spacer()
+            
             Text(cObj.name)
-                .font(.customfont(.bold, fontSize: 16))
+                .font(.customfont(.bold, fontSize: 14))
                 .foregroundColor(.primaryText)
                 .frame(minWidth: 0, maxWidth: .infinity, alignment: .center)
+                .lineLimit(2)
             
             Spacer()
-            
         }
-        .padding(15)
-        .background( cObj.color.opacity(0.3) )
-        .cornerRadius(16)
-        .overlay (
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(cObj.color, lineWidth: 1)
+        .padding(10)
+        .background(Color(hex: cObj.color).opacity(0.2)) // Sửa lỗi: Chỉ gọi Color(hex:) một lần
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color(hex: cObj.color).opacity(0.5), lineWidth: 1) // Sửa lỗi: Chỉ gọi Color(hex:) một lần
         )
-    }}
+    }
+}
 
 struct ExploreCategoryCell_Previews: PreviewProvider {
     static var previews: some View {
-        ExploreCategoryCell(cObj: ExploreCategoryModel(dict: [ "cat_id": 1,
-                                                               "cat_name": "Pulses",
-                                                               "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRTUshuJ5pq_Qn3RhB2FKXWNap5MYGl-JZZng&s",
-                                                               "color": "F8A44C"]) )
+        ExploreCategoryCell(cObj: ExploreCategoryModel(dict: [
+            "cat_id": 1,
+            "cat_name": "Fresh Fruits & Vegetable",
+            "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRTUshuJ5pq_Qn3RhB2FKXWNap5MYGl-JZZng&s",
+            "color": "53B175"
+        ]))
         .padding(20)
     }
 }

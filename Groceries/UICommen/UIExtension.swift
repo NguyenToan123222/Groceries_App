@@ -262,3 +262,12 @@ struct RoundedCorner: Shape {
        // Chuyển UIBezierPath thành CGPath
     }
 }
+
+
+
+
+extension UIApplication {
+    func dismissKeyboardGlobally() {
+        sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+}

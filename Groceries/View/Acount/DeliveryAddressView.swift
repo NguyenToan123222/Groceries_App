@@ -4,174 +4,131 @@
 //
 //  Created by Nguyễn Toàn on 17/3/25.
 //
-
 import SwiftUI
 
 struct DeliveryAddressView: View {
     
-    @Environment(\.presentationMode) var mode: Binding<PresentationMode>
+    @Environment(\.presentationMode) var presentationMode
+    @StateObject var deliveryVM = DeliveryAddressViewModel.shared
     
-    @StateObject var addressVM = DeliveryAddressViewModel.shared
-    @State var isPicker: Bool = false
-    var didSelect:( (_ obj: AddressModel) -> () )?
-    
+    let userId: Int // Thêm tham số userId
+    @State private var isPicker = false
+    var didSelect: ((AddressModel) -> Void)?
+    /*
+     VStack chứa header, được cố định ở đầu nhờ .padding(.top, .topInsets) và Spacer().
+     ScrollView được dịch xuống dưới nhờ .padding(.top, .topInsets + 46), tránh chồng lấn với header.
+     */
     var body: some View {
-        ZStack{
-            
-            ScrollView{ // 👈 Khai báo TRƯỚC => Nằm DƯỚI
+        ZStack {
+            ScrollView {
                 LazyVStack(spacing: 15) {
-                    ForEach( addressVM.listArr , id: \.id, content: {
-                        aObj in
-                        
-                        HStack(spacing: 15) {
-                            VStack{
-                                
-                                HStack {
-                                    Text(aObj.name)
-                                        .font(.customfont(.bold, fontSize: 14))
-                                        .foregroundColor(.primaryText)
-                                        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-                                    
-                                    
-                                    Text(aObj.typeName)
-                                        .font(.customfont(.bold, fontSize: 12))
-                                        .foregroundColor(.primaryText)
-                                        .padding(.horizontal, 8)
-                                        .padding(.vertical, 2)
-                                        .background(Color.secondaryText.opacity(0.3))
-                                        .cornerRadius(5)
+                    ForEach(deliveryVM.listArr) { address in
+                        AddressRowView(address: address)
+                            .onTapGesture {
+                                if isPicker {
+                                    presentationMode.wrappedValue.dismiss()
+                                    didSelect?(address)
+                                    /*
+                                     onTapGesture: Khi người dùng nhấn vào một địa chỉ:
+                                     Nếu isPicker là true, đóng view và gọi didSelect với địa chỉ đã chọn.
+                                     Nếu false, không làm gì (chỉ xem).
+                                     */
                                 }
-                                
-                                Text("\(aObj.address),\(aObj.city), \(aObj.state), \(aObj.postalCode) ")
-                                    .font(.customfont(.medium, fontSize: 14))
-                                    .foregroundColor(.primaryText)
-                                    .multilineTextAlignment( .leading)
-                                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-                                
-                                Text(aObj.phone)
-                                    .font(.customfont(.bold, fontSize: 12))
-                                    .foregroundColor(.secondaryText)
-                                    .padding(.vertical, 8)
-                                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-                                
                             }
-                            
-                            VStack{
-                                
-                                Spacer()
-                                
-                                NavigationLink {
-//                                    AddDeliveryAddressView(isEdit: true, editObj: aObj  )
-                                } label: {
-                                    Image(systemName: "pencil")
-                                        .resizable()
-                                        .frame(width: 20, height: 20)
-                                        .foregroundColor(.primaryApp)
-                                }
-                                .padding(.bottom, 8)
-
-                               
-                                
-                                Button {
-                                    addressVM.serviceCallRemove(cObj: aObj)
-                                } label: {
-                                    Image("close")
-                                        .resizable()
-                                        
-                                        .scaledToFit()
-                                        .frame(width: 20, height: 20)
-                                }
-                                
-                                Spacer()
-
-                            }
-                        }
-                        .padding(15)
-                        .background(Color.white)
-                        .cornerRadius(5)
-                        .shadow(color: Color.black.opacity(0.15), radius: 2)
-                        .onTapGesture {
-                            if(isPicker) {
-                                mode.wrappedValue.dismiss()
-                                didSelect?(aObj)
-                            }
-                        }
-
-
-                    })
+                    }
                 }
                 .padding(20)
                 .padding(.top, .topInsets + 46)
                 .padding(.bottom, .bottomInsets + 60)
-
-            }
+            } // Scroll
             
-            
-            VStack { // 👈 Khai báo TRƯỚC => Nằm TRÊN
-                    
-                HStack{
-                    
+            VStack {
+                HStack {
                     Button {
-                        mode.wrappedValue.dismiss()
+                        presentationMode.wrappedValue.dismiss()
                     } label: {
-                        Image("back")
+                        Image(systemName: "arrow.left")
                             .resizable()
                             .scaledToFit()
                             .frame(width: 20, height: 20)
+                            .foregroundColor(.primary)
                     }
-
                     
-                   
                     Spacer()
                     
-                    Text("Delivery Address")
-                        .font(.customfont(.bold, fontSize: 20))
-                        .frame(height: 46)
-                    Spacer()
+                    Text("Delivery Addresses")
+                        .font(.headline)
+                        .foregroundColor(.primary)
                     
+                    Spacer()
                     
                     NavigationLink {
-//                        AddDeliveryAddressView()
+                        AddDeliveryAddressView()
                     } label: {
-                        Image("add_temp")
+                        Image(systemName: "plus")
                             .resizable()
                             .scaledToFit()
                             .frame(width: 20, height: 20)
+                            .foregroundColor(.primary)
                     }
-                    
-                    .foregroundColor(.primaryText)
-                    .padding(.bottom, 8)
-                    
-                    
-
                 }
                 .padding(.top, .topInsets)
                 .padding(.horizontal, 20)
                 .background(Color.white)
-                .shadow(color: Color.black.opacity(0.2),  radius: 2 )
+                .shadow(radius: 2)
                 
-                Spacer()
-                
+                Spacer() // Bottom
+            } // VStack
+        } // Zstack
+        .environmentObject(MainViewModel.shared) // Add this to provide MainViewModel to all child views
+        .onAppear {
+            if userId == 0 {
+                deliveryVM.errorMessage = "Please log in to view addresses"
+                deliveryVM.showError = true
+                return
             }
-            
-            
-            
+            deliveryVM.serviceCallList(userId: userId) // lấy danh sách địa chỉ của người dùng
         }
-        .onAppear{
-            
+        .alert(isPresented: $deliveryVM.showError) {
+            Alert(title: Text("Error"), message: Text(deliveryVM.errorMessage), dismissButton: .default(Text("OK")))
         }
-        .navigationTitle("")
+        .alert(isPresented: $deliveryVM.showSuccess) {
+            Alert(title: Text("Success"), message: Text(deliveryVM.successMessage), dismissButton: .default(Text("OK")))
+        }
         .navigationBarHidden(true)
-        .navigationBarBackButtonHidden(true)
         .ignoresSafeArea()
     }
 }
 
-struct DelieryAddressView_Previews: PreviewProvider {
+struct DeliveryAddressView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationView {
-            DeliveryAddressView()
+            DeliveryAddressView(userId: 1)
+                .environmentObject(MainViewModel.shared) // Add this for preview
         }
-        
     }
 }
+
+/*
+ {
+   "content": [
+     {
+       "id": "550e8400-e29b-41d4-a716-446655440000",
+       "street": "123 Đường ABC",
+       "provinceId": 1,
+       "districtId": 101,
+       "wardId": 1001,
+       "userId": 500,
+       "isDefault": true
+     },
+     {
+       "id": "550e8400-e29b-41d4-a716-446655440001",
+       "street": "456 Đường XYZ",
+       "provinceId": 2,
+       "districtId": 201,
+       "wardId": 2001,
+       "userId": 500,
+       "isDefault": false
+     }
+   ]
+ }*/

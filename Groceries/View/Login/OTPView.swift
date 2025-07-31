@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct OTPView: View {
-    @StateObject var mainVM = MainViewModel.shared
+    @EnvironmentObject var mainVM: MainViewModel
     @State private var otpCode: String = ""
     @State private var showError: Bool = false
     @State private var errorMessage: String = ""
@@ -14,7 +14,6 @@ struct OTPView: View {
     
     var body: some View {
         ZStack {
-            // Animated Background Gradient
             LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.3), Color.purple.opacity(0.3)]),
                            startPoint: .topLeading, endPoint: .bottomTrailing)
                 .edgesIgnoringSafeArea(.all)
@@ -33,7 +32,7 @@ struct OTPView: View {
                                 .frame(width: 25, height: 25)
                         }
                         Spacer()
-                    }
+                    } // Hstack
                     Image("color_logo")
                         .resizable()
                         .scaledToFit()
@@ -70,27 +69,30 @@ struct OTPView: View {
                     .scaleEffect(animateContent ? 1 : 0.8)
                     .animation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0).delay(1.2), value: animateContent)
                     .padding(.bottom, .screenWidth * 0.05)
-                }
+                } // Vstack
                 .padding(.top, .topInsets + 1)
                 .padding(.horizontal, 20)
-            }
-            .onAppear {
-                animateBackground = true
-                animateContent = true
-            }
+            } // Scroll
+            .ignoresSafeArea(.keyboard)
             
             NavigationLink(
-                destination: MainTabView(),
+                destination: LoginView()
+                .environmentObject(mainVM), // Thêm environmentObject để truyền MainViewModel
                 isActive: $isNavigatingToHome,
                 label: { EmptyView() }
             )
-        }
+        } // ZStack
         .alert(isPresented: $showError) {
             Alert(title: Text(Globs.AppName), message: Text(errorMessage), dismissButton: .default(Text("Ok")))
         }
         .navigationBarHidden(true)
         .navigationBarBackButtonHidden(true)
         .ignoresSafeArea()
+        .onAppear {
+            print("OTPView appeared")
+            animateBackground = true
+            animateContent = true
+        }
     }
     
     func verifyOTP() {
@@ -111,8 +113,10 @@ struct OTPView: View {
             if let response = responseObj as? NSDictionary {
                 if response["message"] as? String == "OTP is valid. Your account is now verified." {
                     let userDict = Utils.UDValue(key: Globs.userPayload) as? NSMutableDictionary ?? NSMutableDictionary()
+                    // Nếu Globs.userPayload trong UserDefaults chứa ["username": "user1", "isVerified": 0], thì userDict sẽ là ["username": "user1", "isVerified": 0].
                     userDict["isVerified"] = 1
                     self.mainVM.setUserData(uDict: userDict)
+                    // mainVM.setUserData(uDict: ["username": "user1", "isVerified": 1])
                     self.isNavigatingToHome = true
                 } else {
                     errorMessage = response["error"] as? String ?? "OTP verification failed"
@@ -131,4 +135,5 @@ struct OTPView: View {
 
 #Preview {
     OTPView()
+        .environmentObject(MainViewModel.shared)
 }
