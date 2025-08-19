@@ -1,4 +1,21 @@
-# Hình ảnh dự án
+Mô tả về đề tài
+Ứng dụng mua sắm tạp hóa trực tuyến trên iOS được thiết kế nhằm mang đến trải nghiệm mua sắm nhanh chóng, tiện lợi và an toàn cho người dùng. Hệ thống bao gồm các nhóm chức năng chính sau:
+Đối với người dùng:
+Đăng ký, đăng nhập, thay đổi mật khẩu: Ứng dụng cho phép tạo tài khoản mới, đăng nhập và thay đổi mật khẩu khi cần thiết, đồng thời hỗ trợ xác thực qua OTP email nhằm đảm bảo bảo mật và cá nhân hóa trải nghiệm.
+Tìm kiếm sản phẩm: Ứng dụng hỗ trợ người dùng tìm kiếm sản phẩm tạp hóa nhanh chóng thông qua từ khóa hoặc bộ lọc theo danh mục, thương hiệu, giúp rút ngắn thời gian lựa chọn hàng hóa.
+Xem chi tiết sản phẩm: Ứng dụng hiển thị đầy đủ thông tin sản phẩm như tên, mô tả, giá, hình ảnh và đánh giá từ người dùng.
+Xem sản phẩm bán chạy: Người dùng có thể truy cập danh sách các sản phẩm bán chạy nhất để dễ dàng lựa chọn những mặt hàng được nhiều người ưa chuộng.
+Xem ưu đãi độc quyền: Ứng dụng cập nhật thường xuyên các ưu đãi độc quyền, giúp người dùng dễ dàng xem và chọn các sản phẩm giảm giá.
+Quản lý giỏ hàng và danh sách yêu thích: Cho phép người dùng thêm, xoá, cập nhật số lượng sản phẩm trong giỏ hàng và lưu các mặt hàng yêu thích để mua sau.
+Thanh toán: Ứng dụng cung cấp các phương thức thanh toán linh hoạt, bao gồm tiền mặt khi nhận hàng (COD) và ví điện tử PayPal để đảm bảo nhanh chóng và tiện lợi.
+Quản lý địa chỉ giao hàng: Người dùng có thể thêm, sửa, xóa nhiều địa chỉ giao hàng và lựa chọn địa chỉ mặc định, giúp quá trình giao nhận diễn ra nhanh chóng, chính xác.
+Đơn hàng của tôi: Ứng dụng hiển thị danh sách các đơn hàng mà người dùng đã đặt, giúp theo dõi lịch sử mua sắm một cách dễ dàng và trực quan.
+Chi tiết đơn hàng: Ứng dụng cung cấp thông tin chi tiết về từng đơn hàng như danh sách sản phẩm, số lượng, tổng tiền, phương thức thanh toán, địa chỉ giao hàng và trạng thái đơn hàng.
+Đối với quản trị viên:
+Quản lý tài khoản người dùng: Quản trị viên có thể xem, xóa tài khoản người dùng trên hệ thống, đảm bảo quản lý người dùng hiệu quả.
+Quản lý sản phẩm: Cho phép thêm, sửa, cập nhật hoặc xoá sản phẩm trong hệ thống, hỗ trợ linh hoạt trong việc điều chỉnh danh mục sản phẩm kinh doanh.
+Quản lý đơn hàng: Hỗ trợ theo dõi, thay đổi trạng thái đơn hàng, lọc theo trạng thái, thống kê số lượng đơn và doanh thu theo thời gian thực.
+Quản lý ưu đãi độc quyền: Ứng dụng cho phép tạo và chỉnh sửa các chương trình khuyến mãi đặc biệt cho người dùng.
 
 <img src="https://github.com/user-attachments/assets/7139ebfd-554b-48fe-9b01-7b6a5e9f6f98" width="300" alt="Hình 1">
 <img src="https://github.com/user-attachments/assets/329f87e8-9a7d-4c51-bf98-d9f504bf9e7f" width="300" alt="Hình 2">
