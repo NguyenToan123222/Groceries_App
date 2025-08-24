@@ -1,3 +1,6 @@
+```Groceries store management app```
+
+
 `For End-Users`
 - **User Authentication**: Supports account registration, login, and password changes with OTP email verification for enhanced security and personalized user experience.
 - **Product Search**: Enables quick product discovery through keyword searches or filters by category and brand, streamlining the shopping process.
